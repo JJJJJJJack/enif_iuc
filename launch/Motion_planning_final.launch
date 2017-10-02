@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+
+<launch>
+
+  <node name="signal_sub_pub" pkg="signal_sub_pub" type="signal_publisher" respawn="false" launch-prefix="" output="screen">
+  </node>
+  <node name="glviewer" pkg="glviewer" type="glviewer" respawn="false" launch-prefix="" output="screen">
+  </node>
+</launch>
