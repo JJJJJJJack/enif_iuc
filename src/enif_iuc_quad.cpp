@@ -3,19 +3,22 @@
 //FIXME MPS message
 // callback functions
 
-
-#include <time.h>
-
 using namespace std;
 
 void state_callback(const std_msgs::UInt8 &new_message)
 {
-
+  state = new_message;
 }
 
-void mps_callback(const std_msgs::UInt8 &new_message)
+void mps_callback(const mps_driver::MPS &new_message)
 {
-  
+  mps = new_message;
+  if(mps.gasID.compare("Propane"))
+    GAS_ID = GAS_PROPANE;
+  else if(mps.gasID.compare("Methane"))
+    GAS_ID = GAS_METHANE;
+  else
+    GAS_ID = GAS_NONE;
 }
 
 void GPS_callback(const dji_sdk::GlobalPosition &new_message)
@@ -75,12 +78,21 @@ void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypo
 
 void form_mps(char* buf)
 {
-  
+  buf[0] = AGENT_NUMBER;
+  buf[1] = COMMAND_MPS;
+  buf[2] = GAS_ID;
+  snprintf(buf+3, sizeof(double), "%f", mps.percentLEL);
+  snprintf(buf+3+8*1, sizeof(double), "%f", mps.temperature);
+  snprintf(buf+3+8*2, sizeof(double), "%f", mps.pressure);
+  snprintf(buf+3+8*3, sizeof(double), "%f", mps.humidity);
+  snprintf(buf+3+8*4, sizeof(double), "%f", mps.GPS_latitude);
+  snprintf(buf+3+8*5, sizeof(double), "%f", mps.GPS_longitude);
+  buf[3+8*6] = 0x0A;
 }
 
 void form_GPS(char* buf)
 {
-  buf[0] = GS_ID;
+  buf[0] = AGENT_NUMBER;
   buf[1] = COMMAND_GPS;
   snprintf(buf+2, sizeof(double), "%f", gps.latitude);
   snprintf(buf+2+sizeof(double), sizeof(double), "%f", gps.longitude);
@@ -90,7 +102,7 @@ void form_GPS(char* buf)
 
 void form_state(char* buf)
 {
-  buf[0] = GS_ID;
+  buf[0] = AGENT_NUMBER;
   buf[1] = COMMAND_STATE;
   buf[2] = state.data;
   buf[3] = 0x0A;
@@ -98,15 +110,15 @@ void form_state(char* buf)
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "signal_publisher");
+  ros::init(argc, argv, "enif_iuc_quad");
   ros::NodeHandle n;
   // Receive from Xbee and publish to local ROS
   ros::Publisher  takeoff_pub = n.advertise<std_msgs::Bool>("takeoff_command", 1);
-  ros::Publisher  wp_pub     = n.advertise<enif_iuc::WaypointTask>("waypoint_list", 1);
+  ros::Publisher  wp_pub      = n.advertise<enif_iuc::WaypointTask>("waypoint_list", 1);
   // Subscribe topics from onboard ROS and transmit it through Xbee
-  ros::Subscriber sub_state  = n.subscribe("state",1,state_callback);
-  ros::Subscriber sub_mps    = n.subscribe("mps_data",1,mps_callback);
-  ros::Subscriber sub_GPS    = n.subscribe("GPS",  1,GPS_callback);
+  ros::Subscriber sub_state   = n.subscribe("agentState",1,state_callback);
+  ros::Subscriber sub_mps     = n.subscribe("mps_data",1,mps_callback);
+  ros::Subscriber sub_GPS     = n.subscribe("dji_sdk/global_position",  1,GPS_callback);
 
   n.getParam("AGENT_NUMBER", AGENT_NUMBER);
   
@@ -128,8 +140,6 @@ int main(int argc, char **argv)
 
   int count = 0, send_count = 0;
   int waypoint_number = 0;
-  std_msgs::Bool takeoff_command;
-  enif_iuc::WaypointTask waypoint_list;
   fd_set fds;
 
   while (ros::ok())

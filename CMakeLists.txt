@@ -19,13 +19,18 @@ add_message_files(
   Signal.msg
   Waypoint.msg
   WaypointTask.msg
+  AgentTakeoff.msg
+  AgentState.msg
+  AgentMPS.msg
+  AgentWaypointTask.msg
+  AgentGlobalPosition.msg
 #   Message2.msg
 )
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  std_msgs
+  std_msgs mps_driver dji_sdk
   # Or other packages containing msgs
 )
 
@@ -54,9 +59,17 @@ add_executable(enif_iuc_quad
   src/enif_iuc_quad.cpp
 )
 
+add_executable(enif_iuc_ground
+  src/enif_iuc_ground.cpp
+)
+
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(enif_iuc_quad
   ${catkin_LIBRARIES}
 )
 
+
+target_link_libraries(enif_iuc_ground
+  ${catkin_LIBRARIES}
+)

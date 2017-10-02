@@ -1,0 +1,2 @@
+uint8 agent_number
+bool takeoff_command
