@@ -5,6 +5,7 @@
 #include "enif_iuc/AgentGlobalPosition.h"
 #include "enif_iuc/AgentMPS.h"
 #include "enif_iuc/AgentState.h"
+#include "enif_iuc/AgentHeight.h"
 
 
 bool NEW_TAKEOFF = false, NEW_WP = false;
@@ -72,13 +73,16 @@ void get_mps(char* buf)
 
 void get_GPS(char* buf)
 {
-  double latitude, longitude;
-  int health = 0;
+  double latitude, longitude, ext_height;
+  int status = 0;
   memcpy(&latitude, buf+2, sizeof(double));
   gps.latitude = latitude;
   memcpy(&longitude, buf+2+sizeof(double), sizeof(double));
   gps.longitude = longitude;
-  gps.health = buf[18];
+  gps.status.status = buf[18];
+  gps.altitude = buf[19];
+  memcpy(&ext_height, buf+20, sizeof(double));
+  height.range = ext_height;
 }
 
 void form_takeoff(char* buf, int agent_number, bool takeoff)
@@ -119,6 +123,7 @@ int main(int argc, char **argv)
   ros::Publisher  state_pub    = n.advertise<enif_iuc::AgentState>("agentState", 1);
   ros::Publisher  mps_pub      = n.advertise<enif_iuc::AgentMPS>("mps_data", 1);
   ros::Publisher  GPS_pub      = n.advertise<enif_iuc::AgentGlobalPosition>("global_position", 1);
+  ros::Publisher  height_pub   = n.advertise<enif_iuc::AgentHeight>("ext_height", 1);
   ros::Subscriber sub_takeoff  = n.subscribe("takeoff_command",1,takeoff_callback);
   ros::Subscriber sub_wp       = n.subscribe("waypoint_list",1,wp_callback);
   
@@ -165,15 +170,19 @@ int main(int argc, char **argv)
 	  // Get command type
 	  int command_type = get_command_type(buf);
 	  enif_iuc::AgentGlobalPosition agent_gps;
+	  enif_iuc::AgentHeight agent_height;
 	  enif_iuc::AgentMPS agent_mps;
 	  enif_iuc::AgentState agent_state;
 	  switch(command_type){
 	  case COMMAND_GPS:
-	    //form GPS and publish
+	    //form GPS, ext_height(lidar height) and publish
 	    get_GPS(buf);
 	    agent_gps.agent_number = target_number;
 	    agent_gps.gps = gps;
 	    GPS_pub.publish(agent_gps);
+	    agent_height.agent_number = target_number;
+	    agent_height.height = height;
+	    height_pub.publish(agent_height);
 	    break;
 	  case COMMAND_MPS:
 	    //form mps and publish

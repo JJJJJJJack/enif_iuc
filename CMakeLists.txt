@@ -10,7 +10,7 @@ find_package(catkin REQUIRED
   roscpp
   rospy
   std_msgs
-  dji_sdk
+  sensor_msgs
   message_generation)
 
 ## Generate messages in the 'msg' folder
@@ -24,13 +24,14 @@ add_message_files(
   AgentMPS.msg
   AgentWaypointTask.msg
   AgentGlobalPosition.msg
+  AgentHeight.msg
 #   Message2.msg
 )
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  std_msgs mps_driver dji_sdk
+  std_msgs mps_driver sensor_msgs
   # Or other packages containing msgs
 )
 

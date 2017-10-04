@@ -21,9 +21,14 @@ void mps_callback(const mps_driver::MPS &new_message)
     GAS_ID = GAS_NONE;
 }
 
-void GPS_callback(const dji_sdk::GlobalPosition &new_message)
+void GPS_callback(const sensor_msgs::NavSatFix &new_message)
 {
   gps = new_message;
+}
+
+void height_callback(const sensor_msgs::Range &new_message)
+{
+  height = new_message;
 }
 
 int get_target_number(char* buf)
@@ -96,8 +101,10 @@ void form_GPS(char* buf)
   buf[1] = COMMAND_GPS;
   snprintf(buf+2, sizeof(double), "%f", gps.latitude);
   snprintf(buf+2+sizeof(double), sizeof(double), "%f", gps.longitude);
-  buf[18] = gps.health;
-  buf[19] = 0x0A;
+  buf[18] = gps.status.status;
+  buf[19] = gps.altitude;
+  snprintf(buf+20, sizeof(double), "%f", height.range);
+  buf[28] = 0x0A;
 }
 
 void form_state(char* buf)
@@ -118,7 +125,8 @@ int main(int argc, char **argv)
   // Subscribe topics from onboard ROS and transmit it through Xbee
   ros::Subscriber sub_state   = n.subscribe("agentState",1,state_callback);
   ros::Subscriber sub_mps     = n.subscribe("mps_data",1,mps_callback);
-  ros::Subscriber sub_GPS     = n.subscribe("dji_sdk/global_position",  1,GPS_callback);
+  ros::Subscriber sub_GPS     = n.subscribe("mavros/global_position/global",1,GPS_callback);
+  ros::Subscriber sub_height  = n.subscribe("ext_height",1,height_callback);
 
   n.getParam("AGENT_NUMBER", AGENT_NUMBER);
   

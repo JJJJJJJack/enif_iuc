@@ -20,9 +20,10 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "std_msgs/UInt8.h"
 #include "std_msgs/Bool.h"
+#include "sensor_msgs/NavSatFix.h"
+#include "sensor_msgs/Range.h"
 #include "enif_iuc/Waypoint.h"
 #include "enif_iuc/WaypointTask.h"
-#include "dji_sdk/dji_drone.h"
 #include "mps_driver/MPS.h"
 
 #define COMMAND_TAKEOFF  1
@@ -40,8 +41,9 @@ int GS_ID = 0;
 int GAS_ID = 0;
 
 std_msgs::UInt8 state;
-dji_sdk::GlobalPosition gps;
+sensor_msgs::NavSatFix gps;
 mps_driver::MPS mps;
+sensor_msgs::Range height;
 
 std_msgs::Bool takeoff_command;
 enif_iuc::WaypointTask waypoint_list;
