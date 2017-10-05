@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+
+<launch>
+  <group ns="ground">
+    <node name="enif_iuc_ground" pkg="enif_iuc" type="enif_iuc_ground" respawn="true" launch-prefix="" output="screen">
+    </node>
+  </group>
+</launch>

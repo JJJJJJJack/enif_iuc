@@ -22,6 +22,7 @@
 #include "std_msgs/Bool.h"
 #include "sensor_msgs/NavSatFix.h"
 #include "sensor_msgs/Range.h"
+#include "sensor_msgs/BatteryState.h"
 #include "enif_iuc/Waypoint.h"
 #include "enif_iuc/WaypointTask.h"
 #include "mps_driver/MPS.h"
@@ -31,6 +32,7 @@
 #define COMMAND_GPS      3
 #define COMMAND_MPS      4
 #define COMMAND_STATE    5
+#define COMMAND_BATTERY  6
 
 #define GAS_NONE    0
 #define GAS_PROPANE 1
@@ -44,6 +46,7 @@ std_msgs::UInt8 state;
 sensor_msgs::NavSatFix gps;
 mps_driver::MPS mps;
 sensor_msgs::Range height;
+sensor_msgs::BatteryState battery;
 
 std_msgs::Bool takeoff_command;
 enif_iuc::WaypointTask waypoint_list;

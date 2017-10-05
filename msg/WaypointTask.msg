@@ -1,9 +1,3 @@
-float32 velocity_range
-float32 idle_velocity
-uint8 action_on_finish
-uint8 mission_exec_times
-uint8 yaw_mode
-uint8 trace_mode
-uint8 action_on_rc_lost
-uint8 gimbal_pitch_mode
+float32 velocity
+float32 damping_distance
 Waypoint[] mission_waypoint

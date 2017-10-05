@@ -3,11 +3,14 @@
 //FIXME MPS message
 // callback functions
 
+bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false;
+
 using namespace std;
 
 void state_callback(const std_msgs::UInt8 &new_message)
 {
   state = new_message;
+  NEW_STATE = true;
 }
 
 void mps_callback(const mps_driver::MPS &new_message)
@@ -19,16 +22,25 @@ void mps_callback(const mps_driver::MPS &new_message)
     GAS_ID = GAS_METHANE;
   else
     GAS_ID = GAS_NONE;
+  NEW_MPS = true;
 }
 
 void GPS_callback(const sensor_msgs::NavSatFix &new_message)
 {
   gps = new_message;
+  NEW_GPS = true;
 }
 
 void height_callback(const sensor_msgs::Range &new_message)
 {
   height = new_message;
+  NEW_HEIGHT = true;
+}
+
+void battery_callback(const sensor_msgs::BatteryState &new_message)
+{
+  battery = new_message;
+  NEW_BATTERY = true;
 }
 
 int get_target_number(char* buf)
@@ -58,10 +70,11 @@ int get_waypoint_number(char* buf)
 
 void get_waypoint_info(char* buf, enif_iuc::WaypointTask &waypoint_list)
 {
-  double velocity;
+  double velocity, damping_distance;
   memcpy(&velocity, buf+3, sizeof(double));
-  waypoint_list.velocity_range = velocity;
-  waypoint_list.idle_velocity  = velocity;
+  waypoint_list.velocity = velocity;
+  memcpy(&damping_distance, buf+11, sizeof(double));
+  waypoint_list.damping_distance = damping_distance;
 }
 
 void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypoint_list)
@@ -70,13 +83,23 @@ void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypo
   for(int i=0; i<waypoint_number; i++)
     {
       enif_iuc::Waypoint waypoint;
-      double latitude, longitude;
-      memcpy(&latitude, buf+11+byte_number, sizeof(double));
+      double latitude, longitude, target_height;
+      int staytime;
+      // Get latitude
+      memcpy(&latitude, buf+19+byte_number, sizeof(double));
       waypoint.latitude = latitude;
       byte_number += sizeof(double);
-      memcpy(&longitude, buf+11+byte_number, sizeof(double));
+      // Get longitude
+      memcpy(&longitude, buf+19+byte_number, sizeof(double));
       waypoint.longitude = longitude;
       byte_number += sizeof(double);
+      // Get waypoint height
+      memcpy(&target_height, buf+19+byte_number, sizeof(double));
+      waypoint.target_height = target_height;
+      byte_number += sizeof(double);
+      // Get staytime
+      waypoint.staytime = buf[19+byte_number];
+      byte_number++;
       waypoint_list.mission_waypoint.push_back(waypoint);
     }
 }
@@ -93,6 +116,7 @@ void form_mps(char* buf)
   snprintf(buf+3+8*4, sizeof(double), "%f", mps.GPS_latitude);
   snprintf(buf+3+8*5, sizeof(double), "%f", mps.GPS_longitude);
   buf[3+8*6] = 0x0A;
+  buf[4+8*6] = '\0';
 }
 
 void form_GPS(char* buf)
@@ -105,6 +129,7 @@ void form_GPS(char* buf)
   buf[19] = gps.altitude;
   snprintf(buf+20, sizeof(double), "%f", height.range);
   buf[28] = 0x0A;
+  buf[29] = '\0';
 }
 
 void form_state(char* buf)
@@ -113,6 +138,16 @@ void form_state(char* buf)
   buf[1] = COMMAND_STATE;
   buf[2] = state.data;
   buf[3] = 0x0A;
+  buf[4] = '\0';
+}
+
+void form_battery(char* buf)
+{
+  buf[0] = AGENT_NUMBER;
+  buf[1] = COMMAND_BATTERY;
+  snprintf(buf+2, sizeof(double), "%f", battery.voltage);
+  buf[10] = 0x0A;
+  buf[11] = '\0';
 }
 
 int main(int argc, char **argv)
@@ -127,19 +162,21 @@ int main(int argc, char **argv)
   ros::Subscriber sub_mps     = n.subscribe("mps_data",1,mps_callback);
   ros::Subscriber sub_GPS     = n.subscribe("mavros/global_position/global",1,GPS_callback);
   ros::Subscriber sub_height  = n.subscribe("ext_height",1,height_callback);
+  ros::Subscriber sub_battery = n.subscribe("mavros/battery",1,battery_callback);
 
-  n.getParam("AGENT_NUMBER", AGENT_NUMBER);
+  n.getParam("/enif_iuc_quad/AGENT_NUMBER", AGENT_NUMBER);
+  cout<<"This is Agent No."<<AGENT_NUMBER<<endl;
   
   ros::Rate loop_rate(100);
 
   struct timeval tvstart, tvend, timeout;
   gettimeofday(&tvstart,NULL);
-  timeout.tv_sec = 2;
+  timeout.tv_sec = 1;
   timeout.tv_usec = 0;
 
   // Start the USB serial port
   FILE *fp;
-  fp = fopen("/dev/ttyUSB0", "r+");
+  fp = fopen("/dev/ttyUSB2", "r+");
   if(fp != NULL)
     cout<<"Success logging PWM at device No."<<fp<<endl;
   else
@@ -165,7 +202,8 @@ int main(int argc, char **argv)
 	cout<<"Target number: "<<target_number<<endl;
 	if(target_number != AGENT_NUMBER){
 	  //Do nothing if target number doesn't match
-	  cout<<buf<<endl;
+	  //cout<<buf<<endl;
+	  printf("%x %x %x %x\n", buf[0], buf[1], buf[2], buf[3]);
 	  cout<<"hello"<<endl;
 	}else{
 	  // Get command type
@@ -190,33 +228,50 @@ int main(int argc, char **argv)
 	  }
 	}
       }
-    // Send GPS mps and state data every 1 sec
-    if(count%30 == 0)
+    // Send GPS mps state and battery data every 1 sec
+    if(count%25 == 0)
       {
 	char send_buf[256];
 	switch(send_count){
 	case 0:
-	  form_mps(send_buf);
-	  fputs(send_buf, fp);
+	  if(NEW_MPS){
+	    form_mps(send_buf);
+	    fputs(send_buf, fp);
+	    NEW_MPS = false;
+	  }
 	  break;
 	case 1:
-	  form_GPS(send_buf);
-	  fputs(send_buf, fp);
+	  if(NEW_GPS){
+	    form_GPS(send_buf);
+	    fputs(send_buf, fp);
+	    NEW_GPS = false;
+	  }
 	  break;
 	case 2:
-	  form_state(send_buf);
-	  fputs(send_buf, fp);
+	  if(NEW_STATE){
+	    form_state(send_buf);
+	    fputs(send_buf, fp);
+	    NEW_STATE = false;
+	  }
+	  break;
+	case 3:
+	  if(NEW_BATTERY){
+	    form_battery(send_buf);
+	    fputs(send_buf, fp);
+	    NEW_BATTERY = false;
+	  }
 	  break;
 	default:
 	  break;
 	}
-	if(send_count < 2) send_count++;
+	if(send_count < 3) send_count++;
 	else send_count = 0;
       }
     
     ros::spinOnce();
     loop_rate.sleep();
     ++count;
+
   }
   
   fclose(fp);

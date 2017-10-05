@@ -1,2 +1,2 @@
-uint8 agent_number
+int8 agent_number
 bool takeoff_command

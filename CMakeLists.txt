@@ -25,6 +25,7 @@ add_message_files(
   AgentWaypointTask.msg
   AgentGlobalPosition.msg
   AgentHeight.msg
+  AgentBatteryState.msg
 #   Message2.msg
 )
 
@@ -64,6 +65,10 @@ add_executable(enif_iuc_ground
   src/enif_iuc_ground.cpp
 )
 
+add_executable(enif_iuc_publisher
+  src/signal_subscriber.cpp
+)
+
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(enif_iuc_quad
@@ -72,5 +77,9 @@ target_link_libraries(enif_iuc_quad
 
 
 target_link_libraries(enif_iuc_ground
+  ${catkin_LIBRARIES}
+)
+
+target_link_libraries(enif_iuc_publisher
   ${catkin_LIBRARIES}
 )

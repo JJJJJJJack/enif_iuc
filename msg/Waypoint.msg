@@ -1,9 +1,10 @@
+#latitude is in degree
 float64 latitude
+#longitude is in degree
 float64 longitude
-float32 altitude
-float32 damping_distance
-int16 target_yaw
-int16 target_gimbal_pitch
-uint8 turn_mode
-uint8 has_action
-uint16 action_time_limit
+#relative height in meters
+float32 target_height
+#heading to next waypoint in [-180,180]
+int16 heading
+#stay time is in second
+uint16 staytime
