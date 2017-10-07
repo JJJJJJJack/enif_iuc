@@ -1,3 +1,3 @@
-float32 velocity
-float32 damping_distance
+float64 velocity
+float64 damping_distance
 Waypoint[] mission_waypoint

@@ -13,6 +13,9 @@
 #include <vector>
 #include <unistd.h>
 #include <fcntl.h>
+#include <termios.h>
+#include <sys/ioctl.h>
+#include "serial/serial.h"
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
@@ -50,3 +53,34 @@ sensor_msgs::BatteryState battery;
 
 std_msgs::Bool takeoff_command;
 enif_iuc::WaypointTask waypoint_list;
+
+
+int CharToInt(char a)
+{
+  return (int)(a - '0');
+}
+
+char IntToChar(int a)
+{
+  return (char)(a + '0');
+}
+
+void DoubleToChar(char* buf, double number)
+{
+  unsigned char *chptr;
+  chptr = (unsigned char *) &number;
+  for(int i = 0; i<sizeof(double); i++){
+    buf[i] = *chptr + '0';
+    chptr++;
+  }
+}
+
+void CharToDouble(char* buf, double &number)
+{
+  unsigned char *chptr;
+  chptr = (unsigned char *) &number;
+  for(int i = 0; i<sizeof(double); i++){
+    *chptr = buf[i] - '0';
+    chptr++;
+  }
+}

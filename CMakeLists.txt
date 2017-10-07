@@ -11,6 +11,7 @@ find_package(catkin REQUIRED
   rospy
   std_msgs
   sensor_msgs
+  serial
   message_generation)
 
 ## Generate messages in the 'msg' folder
@@ -78,6 +79,7 @@ target_link_libraries(enif_iuc_quad
 
 target_link_libraries(enif_iuc_ground
   ${catkin_LIBRARIES}
+  serial
 )
 
 target_link_libraries(enif_iuc_publisher
