@@ -84,3 +84,38 @@ void CharToDouble(char* buf, double &number)
     chptr++;
   }
 }
+
+int get_target_number(char* buf)
+{
+  int number = CharToInt(buf[1]);
+  return number;
+}
+
+int get_command_type(char* buf)
+{
+  int number = CharToInt(buf[2]);
+  return number;
+}
+
+bool checksum(char* buf)
+{
+  int length = strlen(buf+1);
+  unsigned char sum = 0;
+  for(int i = 1; i < length; i++){
+    sum += buf[i];
+  }
+  if((unsigned char)buf[0] == sum)
+    return true;
+  else
+    return false;
+}
+
+void form_checksum(char* buf)
+{
+  int length = strlen(buf+1);
+  unsigned char sum = 0;
+  for(int i = 1; i < length; i++){
+    sum += buf[i];
+  }
+  buf[0] = sum;
+}

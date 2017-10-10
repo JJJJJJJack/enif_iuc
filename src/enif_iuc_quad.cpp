@@ -43,21 +43,9 @@ void battery_callback(const sensor_msgs::BatteryState &new_message)
   NEW_BATTERY = true;
 }
 
-int get_target_number(char* buf)
-{
-  int number = CharToInt(buf[0]);
-  return number;
-}
-
-int get_command_type(char* buf)
-{
-  int number = CharToInt(buf[1]);
-  return number;
-}
-
 bool get_takeoff_command(char* buf)
 {
-  if(CharToInt(buf[2]) == 0)
+  if(CharToInt(buf[3]) == 0)
     return false;
   else
     return true;
@@ -65,15 +53,15 @@ bool get_takeoff_command(char* buf)
 
 int get_waypoint_number(char* buf)
 {
-  return CharToInt(buf[2]);
+  return CharToInt(buf[3]);
 }
 
 void get_waypoint_info(char* buf, enif_iuc::WaypointTask &waypoint_list)
 {
   double velocity, damping_distance;
-  CharToDouble(buf+3, velocity);
+  CharToDouble(buf+4, velocity);
   waypoint_list.velocity = velocity;
-  CharToDouble(buf+11, damping_distance);
+  CharToDouble(buf+12, damping_distance);
   waypoint_list.damping_distance = damping_distance;
 }
 
@@ -86,19 +74,19 @@ void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypo
       double latitude, longitude, target_height;
       int staytime;
       // Get latitude
-      CharToDouble(buf+19+byte_number, latitude);
+      CharToDouble(buf+20+byte_number, latitude);
       waypoint.latitude = latitude;
       byte_number += sizeof(double);
       // Get longitude
-      CharToDouble(buf+19+byte_number, longitude);
+      CharToDouble(buf+20+byte_number, longitude);
       waypoint.longitude = longitude;
       byte_number += sizeof(double);
       // Get waypoint height
-      CharToDouble(buf+19+byte_number, target_height);
+      CharToDouble(buf+20+byte_number, target_height);
       waypoint.target_height = target_height;
       byte_number += sizeof(double);
       // Get staytime
-      waypoint.staytime = CharToInt(buf[19+byte_number]);
+      waypoint.staytime = CharToInt(buf[20+byte_number]);
       byte_number++;
       waypoint_list.mission_waypoint.push_back(waypoint);
     }
@@ -106,44 +94,44 @@ void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypo
 
 void form_mps(char* buf)
 {
-  buf[0] = IntToChar(AGENT_NUMBER);
-  buf[1] = IntToChar(COMMAND_MPS);
-  buf[2] = IntToChar(GAS_ID);
-  DoubleToChar(buf+3, mps.percentLEL);
-  DoubleToChar(buf+3+8*1, mps.temperature);
-  DoubleToChar(buf+3+8*2, mps.pressure);
-  DoubleToChar(buf+3+8*3, mps.humidity);
-  DoubleToChar(buf+3+8*4, mps.GPS_latitude);
-  DoubleToChar(buf+3+8*5, mps.GPS_longitude);
-  buf[3+8*6] = 0x0A;
+  buf[1] = IntToChar(AGENT_NUMBER);
+  buf[2] = IntToChar(COMMAND_MPS);
+  buf[3] = IntToChar(GAS_ID);
+  DoubleToChar(buf+4, mps.percentLEL);
+  DoubleToChar(buf+4+8*1, mps.temperature);
+  DoubleToChar(buf+4+8*2, mps.pressure);
+  DoubleToChar(buf+4+8*3, mps.humidity);
+  DoubleToChar(buf+4+8*4, mps.GPS_latitude);
+  DoubleToChar(buf+4+8*5, mps.GPS_longitude);
+  buf[4+8*6] = 0x0A;
 }
 
 void form_GPS(char* buf)
 {
-  buf[0] = IntToChar(AGENT_NUMBER);
-  buf[1] = IntToChar(COMMAND_GPS);
-  DoubleToChar(buf+2, gps.latitude);
-  DoubleToChar(buf+2, gps.longitude);
-  buf[18] = IntToChar(gps.status.status);
-  buf[19] = IntToChar(gps.altitude);
-  DoubleToChar(buf+2, height.range);
-  buf[28] = 0x0A;
+  buf[1] = IntToChar(AGENT_NUMBER);
+  buf[2] = IntToChar(COMMAND_GPS);
+  DoubleToChar(buf+3, gps.latitude);
+  DoubleToChar(buf+11, gps.longitude);
+  buf[19] = IntToChar(gps.status.status);
+  buf[20] = IntToChar(gps.altitude);
+  DoubleToChar(buf+21, height.range);
+  buf[29] = 0x0A;
 }
 
 void form_state(char* buf)
 {
-  buf[0] = IntToChar(AGENT_NUMBER);
-  buf[1] = IntToChar(COMMAND_STATE);
-  buf[2] = IntToChar(state.data);
-  buf[3] = 0x0A;
+  buf[1] = IntToChar(AGENT_NUMBER);
+  buf[2] = IntToChar(COMMAND_STATE);
+  buf[3] = IntToChar(state.data);
+  buf[4] = 0x0A;
 }
 
 void form_battery(char* buf)
 {
-  buf[0] = IntToChar(AGENT_NUMBER);
-  buf[1] = IntToChar(COMMAND_BATTERY);
-  DoubleToChar(buf+2, battery.voltage);
-  buf[10] = 0x0A;
+  buf[1] = IntToChar(AGENT_NUMBER);
+  buf[2] = IntToChar(COMMAND_BATTERY);
+  DoubleToChar(buf+3, battery.voltage);
+  buf[11] = 0x0A;
 }
 
 int main(int argc, char **argv)
@@ -194,6 +182,7 @@ int main(int argc, char **argv)
       // Get command type
       cout<<"Receiving command: ";
       int command_type = get_command_type(buf);
+      bool checksum_result = false;
       switch(command_type){
       case COMMAND_WAYPOINT:
 	// Publish waypoint
@@ -202,12 +191,16 @@ int main(int argc, char **argv)
 	waypoint_number = get_waypoint_number(buf);
 	get_waypoint_info(buf, waypoint_list);
 	get_waypoints(waypoint_number, buf, waypoint_list);
-	wp_pub.publish(waypoint_list);
+	checksum_result = checksum(buf);
+	if(checksum_result)
+	  wp_pub.publish(waypoint_list);
 	break;
       case COMMAND_TAKEOFF:
 	cout<< " Takeoff"<<endl;
 	takeoff_command.data = get_takeoff_command(buf);
-	takeoff_pub.publish(takeoff_command);
+	checksum_result = checksum(buf);
+	if(checksum_result)
+	  takeoff_pub.publish(takeoff_command);
 	break;
       default:
 	break;
@@ -221,6 +214,7 @@ int main(int argc, char **argv)
 	case 0:
 	  if(NEW_MPS){
 	    form_mps(send_buf);
+	    form_checksum(send_buf);
 	    string send_data(send_buf);
 	    USBPORT.write(send_data);
 	    NEW_MPS = false;
@@ -229,6 +223,7 @@ int main(int argc, char **argv)
 	case 1:
 	  if(NEW_GPS){
 	    form_GPS(send_buf);
+	    form_checksum(send_buf);
 	    string send_data(send_buf);
 	    USBPORT.write(send_data);
 	    NEW_GPS = false;
@@ -237,6 +232,7 @@ int main(int argc, char **argv)
 	case 2:
 	  if(NEW_STATE){
 	    form_state(send_buf);
+	    form_checksum(send_buf);
 	    string send_data(send_buf);
 	    USBPORT.write(send_data);
 	    NEW_STATE = false;
@@ -245,6 +241,7 @@ int main(int argc, char **argv)
 	case 3:
 	  if(NEW_BATTERY){
 	    form_battery(send_buf);
+	    form_checksum(send_buf);
 	    string send_data(send_buf);
 	    USBPORT.write(send_data);
 	    NEW_BATTERY = false;
