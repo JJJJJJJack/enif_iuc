@@ -12,8 +12,8 @@ int main(int argc, char **argv)
 	
   ros::Rate loop_rate(1000);
   ros::Publisher  stuff_pub2 = n.advertise<std_msgs::UInt8>("/gro", 1000);
-  ros::Publisher  stuff_pub = n.advertise<enif_iuc::AgentTakeoff>("/ground/takeoff_command", 1);
-  ros::Publisher  wp_pub = n.advertise<enif_iuc::AgentWaypointTask>("/ground/waypoint_list", 1);
+  ros::Publisher  stuff_pub = n.advertise<enif_iuc::AgentTakeoff>("/takeoff_command", 1);
+  ros::Publisher  wp_pub = n.advertise<enif_iuc::AgentWaypointTask>("/waypoint_list", 1);
   int count = 0;
   
   while (ros::ok())

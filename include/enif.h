@@ -19,7 +19,6 @@
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
-#include "signal_sub_pub/Signal.h"
 #include "geometry_msgs/PoseStamped.h"
 #include "std_msgs/UInt8.h"
 #include "std_msgs/Bool.h"
