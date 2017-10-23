@@ -141,7 +141,7 @@ int main(int argc, char **argv)
   timeout.tv_usec = 0;
 
   // Start the USB serial port
-  serial::Serial USBPORT("/dev/ttyUSB0", 9600, serial::Timeout::simpleTimeout(1));
+  serial::Serial USBPORT("/dev/ttyUSB0", 9600, serial::Timeout::simpleTimeout(100));
   if(USBPORT.isOpen())
     cout<<"Wireless UART port opened"<<endl;
   else
@@ -152,7 +152,7 @@ int main(int argc, char **argv)
 
   while (ros::ok())
   {
-    char buf[256] = {0};
+    char buf[256] = {'\0'};
     string data = USBPORT.read(256+1);
     strcpy(buf, data.c_str());
     // Get the target number first
@@ -214,7 +214,7 @@ int main(int argc, char **argv)
 	break;
       }
     }
-    if(count%100 == 0)
+    if(count%10 == 0)
       {
 	char send_buf[256] = {'\0'};
 	switch(send_count){

@@ -1,8 +1,5 @@
 #include "enif.h"
 
-//FIXME MPS message
-// callback functions
-
 bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false;
 
 using namespace std;
@@ -16,9 +13,9 @@ void state_callback(const std_msgs::UInt8 &new_message)
 void mps_callback(const mps_driver::MPS &new_message)
 {
   mps = new_message;
-  if(mps.gasID.compare("Propane"))
+  if(mps.gasID.compare("Propane")==0)
     GAS_ID = GAS_PROPANE;
-  else if(mps.gasID.compare("Methane"))
+  else if(mps.gasID.compare("Methane")==0)
     GAS_ID = GAS_METHANE;
   else
     GAS_ID = GAS_NONE;
@@ -170,7 +167,7 @@ int main(int argc, char **argv)
 
   while (ros::ok())
   {
-    char buf[256] = {0};
+    char buf[256] = {'\0'};
     string data = USBPORT.read(256+1);
     strcpy(buf, data.c_str());
     // Get the target number first
@@ -209,7 +206,7 @@ int main(int argc, char **argv)
     // Send GPS mps state and battery data every 1 sec
     if(count%5 == 0)
       {
-	char send_buf[256];
+	char send_buf[256] = {'\0'};
 	switch(send_count){
 	case 0:
 	  if(NEW_MPS){
