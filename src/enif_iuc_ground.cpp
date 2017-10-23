@@ -45,7 +45,8 @@ void get_mps(char* buf)
     string str = "None";
     mps.gasID = str;
   }
-  float percentLEL, temperature, pressure, humidity, GPS_latitude, GPS_longitude;
+  float percentLEL, temperature, pressure, humidity;
+  double GPS_latitude, GPS_longitude;
   CharToFloat(buf+4, percentLEL);
   mps.percentLEL = percentLEL;
   CharToFloat(buf+4+4, temperature);
