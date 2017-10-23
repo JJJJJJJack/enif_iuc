@@ -45,20 +45,19 @@ void get_mps(char* buf)
     string str = "None";
     mps.gasID = str;
   }
-  double percentLEL, temperature, pressure, humidity, GPS_latitude, GPS_longitude;
-  CharToDouble(buf+4, percentLEL);
+  float percentLEL, temperature, pressure, humidity, GPS_latitude, GPS_longitude;
+  CharToFloat(buf+4, percentLEL);
   mps.percentLEL = percentLEL;
-  CharToDouble(buf+4+8*1, temperature);
+  CharToFloat(buf+4+4, temperature);
   mps.temperature = temperature;
-  CharToDouble(buf+4+8*2, pressure);
+  CharToFloat(buf+4+8, pressure);
   mps.pressure = pressure;
-  CharToDouble(buf+4+8*3, humidity);
+  CharToFloat(buf+4+12, humidity);
   mps.humidity = humidity;
-  CharToDouble(buf+4+8*4, GPS_latitude);
+  CharToDouble(buf+4+16, GPS_latitude);
   mps.GPS_latitude = GPS_latitude;
-  CharToDouble(buf+4+8*5, GPS_longitude);
+  CharToDouble(buf+4+24, GPS_longitude);
   mps.GPS_longitude = GPS_longitude;
-  CharToDouble(buf+4+8*6, percentLEL);
 }
 
 void get_GPS(char* buf)
@@ -79,8 +78,8 @@ void get_GPS(char* buf)
 
 void get_battery(char* buf)
 {
-  double voltage = 0;
-  CharToDouble(buf+3, voltage);
+  float voltage = 0;
+  CharToFloat(buf+3, voltage);
   battery.voltage = voltage;
   battery.header.stamp = ros::Time::now();
 }

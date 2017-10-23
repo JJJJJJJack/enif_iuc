@@ -94,13 +94,13 @@ void form_mps(char* buf)
   buf[1] = IntToChar(AGENT_NUMBER);
   buf[2] = IntToChar(COMMAND_MPS);
   buf[3] = IntToChar(GAS_ID);
-  DoubleToChar(buf+4, mps.percentLEL);
-  DoubleToChar(buf+4+8*1, mps.temperature);
-  DoubleToChar(buf+4+8*2, mps.pressure);
-  DoubleToChar(buf+4+8*3, mps.humidity);
-  DoubleToChar(buf+4+8*4, mps.GPS_latitude);
-  DoubleToChar(buf+4+8*5, mps.GPS_longitude);
-  buf[4+8*6] = 0x0A;
+  FloatToChar(buf+4, mps.percentLEL);
+  FloatToChar(buf+4+4, mps.temperature);
+  FloatToChar(buf+4+8, mps.pressure);
+  FloatToChar(buf+4+12, mps.humidity);
+  DoubleToChar(buf+4+16, mps.GPS_latitude);
+  DoubleToChar(buf+4+24, mps.GPS_longitude);
+  buf[4+32] = 0x0A;
 }
 
 void form_GPS(char* buf)
@@ -127,8 +127,8 @@ void form_battery(char* buf)
 {
   buf[1] = IntToChar(AGENT_NUMBER);
   buf[2] = IntToChar(COMMAND_BATTERY);
-  DoubleToChar(buf+3, battery.voltage);
-  buf[11] = 0x0A;
+  FloatToChar(buf+3, battery.voltage);
+  buf[7] = 0x0A;
 }
 
 int main(int argc, char **argv)

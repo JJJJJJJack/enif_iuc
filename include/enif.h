@@ -74,11 +74,31 @@ void DoubleToChar(char* buf, double number)
   }
 }
 
+void FloatToChar(char* buf, float number)
+{
+  unsigned char *chptr;
+  chptr = (unsigned char *) &number;
+  for(int i = 0; i<sizeof(float); i++){
+    buf[i] = *chptr + '0';
+    chptr++;
+  }
+}
+
 void CharToDouble(char* buf, double &number)
 {
   unsigned char *chptr;
   chptr = (unsigned char *) &number;
   for(int i = 0; i<sizeof(double); i++){
+    *chptr = buf[i] - '0';
+    chptr++;
+  }
+}
+
+void CharToFloat(char* buf, float &number)
+{
+  unsigned char *chptr;
+  chptr = (unsigned char *) &number;
+  for(int i = 0; i<sizeof(float); i++){
     *chptr = buf[i] - '0';
     chptr++;
   }
