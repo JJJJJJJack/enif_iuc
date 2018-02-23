@@ -28,6 +28,7 @@
 #include "enif_iuc/Waypoint.h"
 #include "enif_iuc/WaypointTask.h"
 #include "mps_driver/MPS.h"
+#include <string>
 
 #define COMMAND_TAKEOFF  1
 #define COMMAND_WAYPOINT 2
@@ -40,6 +41,7 @@
 #define GAS_PROPANE 1
 #define GAS_METHANE 2
 
+std::string USB;
 int AGENT_NUMBER = 0;
 int GS_ID = 0;
 int GAS_ID = 0;

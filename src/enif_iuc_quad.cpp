@@ -156,7 +156,9 @@ int main(int argc, char **argv)
   timeout.tv_usec = 0;
 
   // Start the USB serial port
-  serial::Serial USBPORT("/dev/ttyUSB0", 9600, serial::Timeout::simpleTimeout(100));
+  n.getParam("/enif_iuc_quad/USB", USB);
+  serial::Serial USBPORT(USB, 9600, serial::Timeout::simpleTimeout(100));
+  
   if(USBPORT.isOpen())
     cout<<"Wireless UART port opened"<<endl;
   else
