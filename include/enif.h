@@ -140,3 +140,44 @@ void form_checksum(char* buf)
   }
   buf[0] = sum;
 }
+
+int get_waypoint_number(char* buf)
+{
+  return CharToInt(buf[3]);
+}
+
+void get_waypoint_info(char* buf, enif_iuc::WaypointTask &waypoint_list)
+{
+  double velocity, damping_distance;
+  CharToDouble(buf+4, velocity);
+  waypoint_list.velocity = velocity;
+  CharToDouble(buf+12, damping_distance);
+  waypoint_list.damping_distance = damping_distance;
+}
+
+void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypoint_list)
+{
+  int byte_number = 0;
+  for(int i=0; i<waypoint_number; i++)
+    {
+      enif_iuc::Waypoint waypoint;
+      double latitude, longitude, target_height;
+      int staytime;
+      // Get latitude
+      CharToDouble(buf+20+byte_number, latitude);
+      waypoint.latitude = latitude;
+      byte_number += sizeof(double);
+      // Get longitude
+      CharToDouble(buf+20+byte_number, longitude);
+      waypoint.longitude = longitude;
+      byte_number += sizeof(double);
+      // Get waypoint height
+      CharToDouble(buf+20+byte_number, target_height);
+      waypoint.target_height = target_height;
+      byte_number += sizeof(double);
+      // Get staytime
+      waypoint.staytime = CharToInt(buf[20+byte_number]);
+      byte_number++;
+      waypoint_list.mission_waypoint.push_back(waypoint);
+    }
+}

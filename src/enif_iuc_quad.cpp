@@ -48,47 +48,6 @@ bool get_takeoff_command(char* buf)
     return true;
 }
 
-int get_waypoint_number(char* buf)
-{
-  return CharToInt(buf[3]);
-}
-
-void get_waypoint_info(char* buf, enif_iuc::WaypointTask &waypoint_list)
-{
-  double velocity, damping_distance;
-  CharToDouble(buf+4, velocity);
-  waypoint_list.velocity = velocity;
-  CharToDouble(buf+12, damping_distance);
-  waypoint_list.damping_distance = damping_distance;
-}
-
-void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypoint_list)
-{
-  int byte_number = 0;
-  for(int i=0; i<waypoint_number; i++)
-    {
-      enif_iuc::Waypoint waypoint;
-      double latitude, longitude, target_height;
-      int staytime;
-      // Get latitude
-      CharToDouble(buf+20+byte_number, latitude);
-      waypoint.latitude = latitude;
-      byte_number += sizeof(double);
-      // Get longitude
-      CharToDouble(buf+20+byte_number, longitude);
-      waypoint.longitude = longitude;
-      byte_number += sizeof(double);
-      // Get waypoint height
-      CharToDouble(buf+20+byte_number, target_height);
-      waypoint.target_height = target_height;
-      byte_number += sizeof(double);
-      // Get staytime
-      waypoint.staytime = CharToInt(buf[20+byte_number]);
-      byte_number++;
-      waypoint_list.mission_waypoint.push_back(waypoint);
-    }
-}
-
 void form_mps(char* buf)
 {
   buf[1] = IntToChar(AGENT_NUMBER);
@@ -183,7 +142,7 @@ int main(int argc, char **argv)
       int command_type = get_command_type(buf);
       bool checksum_result = false;
       switch(command_type){
-      case COMMAND_WAYPOINT:
+      case COMMAND_WAYPOINT:{
 	// Publish waypoint
 	cout<< " Waypoint"<<endl;
 	waypoint_list.mission_waypoint.clear();
@@ -191,19 +150,30 @@ int main(int argc, char **argv)
 	get_waypoint_info(buf, waypoint_list);
 	get_waypoints(waypoint_number, buf, waypoint_list);
 	checksum_result = checksum(buf);
-	if(checksum_result)
-	  wp_pub.publish(waypoint_list);
+	cout<<waypoint_list<<endl;
+	string send_data(buf);
+	USBPORT.write(send_data);
+	//if(checksum_result)
+	//  wp_pub.publish(waypoint_list);
 	break;
-      case COMMAND_TAKEOFF:
+      }
+      case COMMAND_TAKEOFF:{
 	cout<< " Takeoff"<<endl;
 	takeoff_command.data = get_takeoff_command(buf);
 	checksum_result = checksum(buf);
-	if(checksum_result)
-	  takeoff_pub.publish(takeoff_command);
+	//string send_data;
+	//if(checksum_result)
+	//  takeoff_pub.publish(takeoff_command);
 	break;
+      }
       default:
 	break;
       }
+      if(checksum_result)
+	{
+	  wp_pub.publish(waypoint_list);
+	  takeoff_pub.publish(takeoff_command);
+	}
     }
     // Send GPS mps state and battery data every 1 sec
     if(count%5 == 0)

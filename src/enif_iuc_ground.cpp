@@ -11,9 +11,38 @@
 
 bool NEW_TAKEOFF = false, NEW_WP = false;
 enif_iuc::AgentTakeoff agent_takeoff;
-enif_iuc::AgentWaypointTask agent_wp;
+enif_iuc::AgentWaypointTask agent_wp[256];
+int agent_number = 0;
+bool waypoint_checked[256];
+serial::Serial USBPORT("/dev/ttyUSB0", 9600, serial::Timeout::simpleTimeout(100));
 
 using namespace std;
+
+bool check_waypoints(enif_iuc::WaypointTask sendwp, enif_iuc::WaypointTask responsewp)
+{
+  bool result = false;
+  if(fabs(sendwp.velocity - responsewp.velocity)>1.0 || fabs(sendwp.damping_distance - responsewp.damping_distance)>1.0)
+    return false;
+  else
+    if(sendwp.mission_waypoint.size() != responsewp.mission_waypoint.size())
+      return false;
+    else
+      for(int i = 0; i < sendwp.mission_waypoint.size(); i++)
+	{
+	  if(fabs(sendwp.mission_waypoint[i].latitude - responsewp.mission_waypoint[i].latitude)>1.0)
+	    return false;
+	  else
+	    if(fabs(sendwp.mission_waypoint[i].longitude != responsewp.mission_waypoint[i].longitude)>1.0)
+	      return false;
+	    else
+	      if(fabs(sendwp.mission_waypoint[i].target_height - responsewp.mission_waypoint[i].target_height)>1.0)
+		return false;
+	      else
+		if(fabs(sendwp.mission_waypoint[i].staytime - responsewp.mission_waypoint[i].staytime)>1.0)
+		  return false;
+	}
+  return true;
+}
 
 void takeoff_callback(const enif_iuc::AgentTakeoff &new_message)
 {
@@ -23,8 +52,13 @@ void takeoff_callback(const enif_iuc::AgentTakeoff &new_message)
 
 void wp_callback(const enif_iuc::AgentWaypointTask &new_message)
 {
-  agent_wp = new_message;
-  NEW_WP = true;
+  agent_number = new_message.agent_number;
+  bool check_result = check_waypoints(new_message.waypoint_list, agent_wp[agent_number].waypoint_list);
+  if(check_result == false)// overwrite when new waypoints coming in
+    {
+      agent_wp[agent_number] = new_message;
+      waypoint_checked[agent_number] = false;
+    }
 }
 
 void get_state(char* buf)
@@ -119,7 +153,6 @@ void form_waypoints(char* buf, int waypoint_number, enif_iuc::WaypointTask &wayp
   buf[20+byte_number] = 0x0A;
 }
 
-
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "enif_iuc_ground");
@@ -130,7 +163,7 @@ int main(int argc, char **argv)
   ros::Publisher  GPS_pub      = n.advertise<enif_iuc::AgentGlobalPosition>("global_position", 1);
   ros::Publisher  height_pub   = n.advertise<enif_iuc::AgentHeight>("ext_height", 1);
   ros::Publisher  battery_pub  = n.advertise<enif_iuc::AgentBatteryState>("battery", 1);
-  ros::Subscriber sub_takeoff  = n.subscribe("takeoff_command",1,takeoff_callback);
+  ros::Subscriber sub_takeoff  = n.subscribe("takeoff_command",5,takeoff_callback);
   ros::Subscriber sub_wp       = n.subscribe("waypoint_list",1,wp_callback);
   
   ros::Rate loop_rate(100);
@@ -141,14 +174,13 @@ int main(int argc, char **argv)
   timeout.tv_usec = 0;
 
   // Start the USB serial port
-  serial::Serial USBPORT("/dev/ttyUSB0", 9600, serial::Timeout::simpleTimeout(100));
   if(USBPORT.isOpen())
     cout<<"Wireless UART port opened"<<endl;
   else
     cout<<"Error opening Serial device. Check permission on reading serial port first!"<<endl;
   
   int count = 0, send_count = 0;
-  int waypoint_number = 0;
+  int waypoint_number = 0, response_number = 0;
 
   while (ros::ok())
   {
@@ -176,12 +208,13 @@ int main(int argc, char **argv)
 	get_GPS(buf);
 	agent_gps.agent_number = target_number;
 	agent_gps.gps = gps;
-	GPS_pub.publish(agent_gps);
 	agent_height.agent_number = target_number;
 	agent_height.height = height;
 	checksum_result = checksum(buf);
-	if(checksum_result)
+	if(checksum_result && agent_gps.gps.status.status == 0){
 	  height_pub.publish(agent_height);
+	  GPS_pub.publish(agent_gps);
+	}
 	break;
       case COMMAND_MPS:
 	//form mps and publish
@@ -210,6 +243,17 @@ int main(int argc, char **argv)
 	if(checksum_result)
 	  battery_pub.publish(agent_battery);
 	break;
+      case COMMAND_WAYPOINT:
+	//response from the agent
+	waypoint_list.mission_waypoint.clear();
+	response_number = get_target_number(buf);
+	waypoint_number = get_waypoint_number(buf);
+	get_waypoint_info(buf, waypoint_list);
+	get_waypoints(waypoint_number, buf, waypoint_list);
+	waypoint_checked[response_number] = check_waypoints(agent_wp[response_number].waypoint_list, waypoint_list);
+	cout<<"Waypoint check: "<<waypoint_checked[response_number]<<endl;
+	cout<<waypoint_list<<endl;
+	break;
       default:
 	break;
       }
@@ -219,7 +263,7 @@ int main(int argc, char **argv)
 	char send_buf[256] = {'\0'};
 	switch(send_count){
 	case 0:
-	  if(NEW_TAKEOFF)
+	  //	  if(NEW_TAKEOFF)
 	    {
 	      form_takeoff(send_buf, agent_takeoff.agent_number, agent_takeoff.takeoff_command);
 	      form_checksum(send_buf);
@@ -230,14 +274,15 @@ int main(int argc, char **argv)
 	    }
 	  break;
 	case 1:
-	  if(NEW_WP)
+	  if(waypoint_checked[agent_number] == false && agent_number > 0)
 	    {
-	      form_waypoint_info(send_buf, agent_wp.agent_number, agent_wp.waypoint_list.mission_waypoint.size(), agent_wp.waypoint_list);
-	      form_waypoints(send_buf, agent_wp.waypoint_list.mission_waypoint.size(), agent_wp.waypoint_list);
+	      form_waypoint_info(send_buf, agent_wp[agent_number].agent_number, agent_wp[agent_number].waypoint_list.mission_waypoint.size(), agent_wp[agent_number].waypoint_list);
+	      form_waypoints(send_buf, agent_wp[agent_number].waypoint_list.mission_waypoint.size(), agent_wp[agent_number].waypoint_list);
 	      form_checksum(send_buf);
 	      NEW_WP = false;
 	      string send_data(send_buf);
 	      USBPORT.write(send_data);
+	      cout<<"send waypoint to agent "<<agent_number<<endl;
 	    }
 	  break;
 	default:
