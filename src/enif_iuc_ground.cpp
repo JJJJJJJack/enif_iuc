@@ -315,7 +315,7 @@ int main(int argc, char **argv)
 	break;
       }
     }
-    if(count%10 == 0)
+    if(count%3 == 0)
       {
 	char send_buf[256] = {'\0'};
 	switch(send_count){
