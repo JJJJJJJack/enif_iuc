@@ -355,7 +355,7 @@ int main(int argc, char **argv)
 	default:
 	  break;
 	}
-	if(send_count < 2) send_count++;
+	if(send_count < 1) send_count++;
 	else send_count = 0;
       }
     ros::spinOnce();
