@@ -25,6 +25,7 @@
 #include "sensor_msgs/NavSatFix.h"
 #include "sensor_msgs/Range.h"
 #include "sensor_msgs/BatteryState.h"
+#include "std_msgs/Float64MultiArray.h"
 #include "enif_iuc/Waypoint.h"
 #include "enif_iuc/WaypointTask.h"
 #include "mps_driver/MPS.h"
@@ -36,6 +37,7 @@
 #define COMMAND_MPS      4
 #define COMMAND_STATE    5
 #define COMMAND_BATTERY  6
+#define COMMAND_BOX      7
 
 #define GAS_NONE    0
 #define GAS_PROPANE 1
@@ -54,7 +56,7 @@ sensor_msgs::BatteryState battery;
 
 std_msgs::Bool takeoff_command;
 enif_iuc::WaypointTask waypoint_list;
-
+std_msgs::Float64MultiArray box;
 
 int CharToInt(char a)
 {
@@ -180,4 +182,19 @@ void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypo
       byte_number++;
       waypoint_list.mission_waypoint.push_back(waypoint);
     }
+}
+
+void get_box(char* buf, std_msgs::Float64MultiArray &box)
+{
+  double latitude, longitude, width, height, angle;
+  CharToDouble(buf+3,  longitude);
+  CharToDouble(buf+11, latitude);
+  CharToDouble(buf+19, width);
+  CharToDouble(buf+27, height);
+  angle = CharToInt(buf[28]);
+  box.data.push_back(longitude);
+  box.data.push_back(latitude);
+  box.data.push_back(width);
+  box.data.push_back(height);
+  box.data.push_back(angle);
 }

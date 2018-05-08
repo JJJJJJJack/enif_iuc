@@ -1,0 +1,2 @@
+uint8 agent_number
+std_msgs/Float64MultiArray box

@@ -97,6 +97,7 @@ int main(int argc, char **argv)
   // Receive from Xbee and publish to local ROS
   ros::Publisher  takeoff_pub = n.advertise<std_msgs::Bool>("takeoff_command", 1);
   ros::Publisher  wp_pub      = n.advertise<enif_iuc::WaypointTask>("waypoint_list", 1);
+  ros::Publisher  box_pub     = n.advertise<std_msgs::Float64MultiArray>("rotated_box", 1);
   // Subscribe topics from onboard ROS and transmit it through Xbee
   ros::Subscriber sub_state   = n.subscribe("agentState",1,state_callback);
   ros::Subscriber sub_mps     = n.subscribe("mps_data",1,mps_callback);
@@ -157,9 +158,25 @@ int main(int argc, char **argv)
 	//  wp_pub.publish(waypoint_list);
 	break;
       }
+      case COMMAND_BOX:{
+	cout<< " Box"<<endl;
+	box.data.clear();
+	get_box(buf, box);
+	checksum_result = checksum(buf);
+	cout<<box<<endl;
+	string send_data(buf);
+	USBPORT.write(send_data);
+	//if(checksum_result)
+	//  wp_pub.publish(waypoint_list);
+	break;
+
+      }
       case COMMAND_TAKEOFF:{
-	cout<< " Takeoff"<<endl;
 	takeoff_command.data = get_takeoff_command(buf);
+	if(takeoff_command.data == true)
+	  cout<< " Takeoff"<<endl;
+	else
+	  cout<< " Land"<<endl;
 	checksum_result = checksum(buf);
 	//string send_data;
 	//if(checksum_result)
@@ -173,6 +190,7 @@ int main(int argc, char **argv)
 	{
 	  wp_pub.publish(waypoint_list);
 	  takeoff_pub.publish(takeoff_command);
+	  box_pub.publish(box);
 	}
     }
     // Send GPS mps state and battery data every 1 sec

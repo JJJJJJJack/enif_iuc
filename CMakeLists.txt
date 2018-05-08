@@ -21,6 +21,7 @@ add_message_files(
   Waypoint.msg
   WaypointTask.msg
   AgentTakeoff.msg
+  AgentBox.msg
   AgentState.msg
   AgentMPS.msg
   AgentWaypointTask.msg

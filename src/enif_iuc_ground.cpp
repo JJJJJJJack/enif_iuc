@@ -7,14 +7,15 @@
 #include "enif_iuc/AgentState.h"
 #include "enif_iuc/AgentHeight.h"
 #include "enif_iuc/AgentBatteryState.h"
+#include "enif_iuc/AgentBox.h"
 
-
-bool NEW_TAKEOFF = false, NEW_WP = false;
+bool NEW_TAKEOFF = false, NEW_WP = false, NEW_BOX = false;
 enif_iuc::AgentTakeoff agent_takeoff;
 enif_iuc::AgentWaypointTask agent_wp[256];
+enif_iuc::AgentBox agent_box[256];
 int agent_number = 0;
 bool waypoint_checked[256];
-serial::Serial USBPORT("/dev/ttyUSB0", 9600, serial::Timeout::simpleTimeout(100));
+bool box_checked[256];
 
 using namespace std;
 
@@ -44,6 +45,24 @@ bool check_waypoints(enif_iuc::WaypointTask sendwp, enif_iuc::WaypointTask respo
   return true;
 }
 
+bool check_box(std_msgs::Float64MultiArray sendbox, std_msgs::Float64MultiArray responsebox)
+{
+  bool result = false;
+  if(sendbox.data.size() != responsebox.data.size())
+    return false;
+  if(fabs(sendbox.data[0] - responsebox.data[0])>1.0)
+    return false;
+  else if(fabs(sendbox.data[1] - responsebox.data[1])>1.0)
+    return false;
+  else if(fabs(sendbox.data[2] - responsebox.data[2])>1.0)
+    return false;
+  else if(fabs(sendbox.data[3] - responsebox.data[3])>1.0)
+    return false;
+  else if(fabs(sendbox.data[4] - responsebox.data[4])>1.0)
+    return false;
+  return true;
+}
+
 void takeoff_callback(const enif_iuc::AgentTakeoff &new_message)
 {
   agent_takeoff = new_message;
@@ -58,6 +77,17 @@ void wp_callback(const enif_iuc::AgentWaypointTask &new_message)
     {
       agent_wp[agent_number] = new_message;
       waypoint_checked[agent_number] = false;
+    }
+}
+
+void box_callback(const enif_iuc::AgentBox &new_message)
+{
+  agent_number = new_message.agent_number;
+  bool check_result = check_box(new_message.box, agent_box[agent_number].box);
+  if(check_result == false)// overwrite when new box coming in
+    {
+      agent_box[agent_number] = new_message;
+      box_checked[agent_number] = false;
     }
 }
 
@@ -153,6 +183,18 @@ void form_waypoints(char* buf, int waypoint_number, enif_iuc::WaypointTask &wayp
   buf[20+byte_number] = 0x0A;
 }
 
+void form_box(char* buf, int agent_number, std_msgs::Float64MultiArray &box)
+{
+  buf[1] = IntToChar(agent_number);
+  buf[2] = IntToChar(COMMAND_BOX);
+  DoubleToChar(buf+3,  box.data[0]);
+  DoubleToChar(buf+11, box.data[1]);
+  DoubleToChar(buf+19, box.data[2]);
+  DoubleToChar(buf+27, box.data[3]);
+  buf[28] = IntToChar((int)box.data[4]);
+  buf[29] = 0x0A;
+}
+
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "enif_iuc_ground");
@@ -165,6 +207,7 @@ int main(int argc, char **argv)
   ros::Publisher  battery_pub  = n.advertise<enif_iuc::AgentBatteryState>("battery", 1);
   ros::Subscriber sub_takeoff  = n.subscribe("takeoff_command",5,takeoff_callback);
   ros::Subscriber sub_wp       = n.subscribe("waypoint_list",1,wp_callback);
+  ros::Subscriber sub_box      = n.subscribe("rotated_box",1,box_callback);
   
   ros::Rate loop_rate(100);
 
@@ -173,6 +216,10 @@ int main(int argc, char **argv)
   timeout.tv_sec = 2;
   timeout.tv_usec = 0;
 
+  // Start the USB serial port
+  n.getParam("/enif_iuc_ground/USB", USB);
+  serial::Serial USBPORT(USB, 9600, serial::Timeout::simpleTimeout(100));
+  
   // Start the USB serial port
   if(USBPORT.isOpen())
     cout<<"Wireless UART port opened"<<endl;
@@ -254,6 +301,16 @@ int main(int argc, char **argv)
 	cout<<"Waypoint check: "<<waypoint_checked[response_number]<<endl;
 	cout<<waypoint_list<<endl;
 	break;
+      case COMMAND_BOX:
+	//only verifies response from the agent
+	response_number = get_target_number(buf);
+	box.data.clear();
+	get_box(buf, box);
+	box_checked[response_number] = check_box(agent_box[response_number].box, box);
+	cout<<"Box check: "<<box_checked[response_number]<<endl;
+	cout<<box<<endl;
+	break;
+
       default:
 	break;
       }
@@ -274,7 +331,17 @@ int main(int argc, char **argv)
 	    }
 	  break;
 	case 1:
-	  if(waypoint_checked[agent_number] == false && agent_number > 0)
+	  // Box has higher priority
+	  if(box_checked[agent_number] == false && agent_number > 0)
+	    {
+	      form_box(send_buf, agent_box[agent_number].agent_number, agent_box[agent_number].box);
+	      form_checksum(send_buf);
+	      NEW_BOX = false;
+	      string send_data(send_buf);
+	      USBPORT.write(send_data);
+	      cout<<"send box to agent "<<agent_number<<endl;
+	    }
+	  else if(waypoint_checked[agent_number] == false && agent_number > 0)
 	    {
 	      form_waypoint_info(send_buf, agent_wp[agent_number].agent_number, agent_wp[agent_number].waypoint_list.mission_waypoint.size(), agent_wp[agent_number].waypoint_list);
 	      form_waypoints(send_buf, agent_wp[agent_number].waypoint_list.mission_waypoint.size(), agent_wp[agent_number].waypoint_list);
@@ -288,7 +355,7 @@ int main(int argc, char **argv)
 	default:
 	  break;
 	}
-	if(send_count < 1) send_count++;
+	if(send_count < 2) send_count++;
 	else send_count = 0;
       }
     ros::spinOnce();
