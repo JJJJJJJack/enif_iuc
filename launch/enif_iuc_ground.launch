@@ -2,5 +2,6 @@
 
 <launch>
     <node name="enif_iuc_ground" pkg="enif_iuc" type="enif_iuc_ground" respawn="true" launch-prefix="" output="screen">
+      <param name="USB" type="string" value="/dev/ttyUSB0"/>
     </node>
 </launch>
