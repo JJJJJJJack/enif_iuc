@@ -10,14 +10,23 @@
 #include "enif_iuc/AgentBox.h"
 
 bool NEW_TAKEOFF = false, NEW_WP = false, NEW_BOX = false;
-enif_iuc::AgentTakeoff agent_takeoff;
+enif_iuc::AgentTakeoff agent_takeoff[256];
 enif_iuc::AgentWaypointTask agent_wp[256];
 enif_iuc::AgentBox agent_box[256];
-int agent_number = 0;
-bool waypoint_checked[256];
-bool box_checked[256];
+int agent_number_wp = 0, agent_number_box = 0, agent_number_takeoff = 0;
+bool waypoint_checked[256] = {true, true, true, true, true};
+bool box_checked[256] = {true, true, true, true, true};
+bool takeoff_checked[256] = {true, true, true, true, true};
 
 using namespace std;
+
+bool check_takeoff(std_msgs::Bool sendtakeoff, std_msgs::Bool responsetakeoff)
+{
+  bool result = false;
+  if(sendtakeoff.data != responsetakeoff.data)
+    return false;
+  return true;
+}
 
 bool check_waypoints(enif_iuc::WaypointTask sendwp, enif_iuc::WaypointTask responsewp)
 {
@@ -65,29 +74,34 @@ bool check_box(std_msgs::Float64MultiArray sendbox, std_msgs::Float64MultiArray 
 
 void takeoff_callback(const enif_iuc::AgentTakeoff &new_message)
 {
-  agent_takeoff = new_message;
-  NEW_TAKEOFF = true;
+  agent_number_takeoff = new_message.agent_number;
+  bool check_result = check_takeoff(new_message.takeoff_command, agent_takeoff[agent_number_takeoff].takeoff_command);
+  if(check_result == false)
+    {
+      agent_takeoff[agent_number_takeoff] = new_message;
+      takeoff_checked[agent_number_takeoff] = false;
+    }
 }
 
 void wp_callback(const enif_iuc::AgentWaypointTask &new_message)
 {
-  agent_number = new_message.agent_number;
-  bool check_result = check_waypoints(new_message.waypoint_list, agent_wp[agent_number].waypoint_list);
+  agent_number_wp = new_message.agent_number;
+  bool check_result = check_waypoints(new_message.waypoint_list, agent_wp[agent_number_wp].waypoint_list);
   if(check_result == false)// overwrite when new waypoints coming in
     {
-      agent_wp[agent_number] = new_message;
-      waypoint_checked[agent_number] = false;
+      agent_wp[agent_number_wp] = new_message;
+      waypoint_checked[agent_number_wp] = false;
     }
 }
 
 void box_callback(const enif_iuc::AgentBox &new_message)
 {
-  agent_number = new_message.agent_number;
-  bool check_result = check_box(new_message.box, agent_box[agent_number].box);
+  agent_number_box = new_message.agent_number;
+  bool check_result = check_box(new_message.box, agent_box[agent_number_box].box);
   if(check_result == false)// overwrite when new box coming in
     {
-      agent_box[agent_number] = new_message;
-      box_checked[agent_number] = false;
+      agent_box[agent_number_box] = new_message;
+      box_checked[agent_number_box] = false;
     }
 }
 
@@ -149,11 +163,11 @@ void get_battery(char* buf)
   battery.header.stamp = ros::Time::now();
 }
 
-void form_takeoff(char* buf, int agent_number, bool takeoff)
+void form_takeoff(char* buf, int agent_number, std_msgs::Bool takeoff)
 {
   buf[1] = IntToChar(agent_number);
   buf[2] = IntToChar(COMMAND_TAKEOFF);
-  buf[3] = IntToChar(takeoff);
+  buf[3] = IntToChar(takeoff.data);
   buf[4] = 0x0A;
 }
 
@@ -310,7 +324,14 @@ int main(int argc, char **argv)
 	cout<<"Box check: "<<box_checked[response_number]<<endl;
 	cout<<box<<endl;
 	break;
-
+      case COMMAND_TAKEOFF:
+	//only verifies response from the agent
+	response_number = get_target_number(buf);
+	takeoff_command = get_takeoff_command(buf);
+	takeoff_checked[response_number] = check_takeoff(agent_takeoff[response_number].takeoff_command, takeoff_command);
+	cout<<"Takeoff check: "<<takeoff_checked[response_number]<<endl;
+	cout<<takeoff_command<<endl;
+	break;
       default:
 	break;
       }
@@ -320,36 +341,36 @@ int main(int argc, char **argv)
 	char send_buf[256] = {'\0'};
 	switch(send_count){
 	case 0:
-	  //	  if(NEW_TAKEOFF)
+	  if(takeoff_checked[agent_number_takeoff] == false && agent_number_takeoff > 0)
 	    {
-	      form_takeoff(send_buf, agent_takeoff.agent_number, agent_takeoff.takeoff_command);
+	      form_takeoff(send_buf, agent_takeoff[agent_number_takeoff].agent_number, agent_takeoff[agent_number_takeoff].takeoff_command);
 	      form_checksum(send_buf);
 	      NEW_TAKEOFF = false;
 	      string send_data(send_buf);
 	      USBPORT.write(send_data);
-	      cout<<send_data<<endl;
+	      cout<<"Send takeoff command to agent "<<agent_number_takeoff<<endl;
 	    }
 	  break;
 	case 1:
 	  // Box has higher priority
-	  if(box_checked[agent_number] == false && agent_number > 0)
+	  if(box_checked[agent_number_box] == false && agent_number_box > 0)
 	    {
-	      form_box(send_buf, agent_box[agent_number].agent_number, agent_box[agent_number].box);
+	      form_box(send_buf, agent_box[agent_number_box].agent_number, agent_box[agent_number_box].box);
 	      form_checksum(send_buf);
 	      NEW_BOX = false;
 	      string send_data(send_buf);
 	      USBPORT.write(send_data);
-	      cout<<"send box to agent "<<agent_number<<endl;
+	      cout<<"send box to agent "<<agent_number_box<<endl;
 	    }
-	  else if(waypoint_checked[agent_number] == false && agent_number > 0)
+	  else if(waypoint_checked[agent_number_wp] == false && agent_number_wp > 0)
 	    {
-	      form_waypoint_info(send_buf, agent_wp[agent_number].agent_number, agent_wp[agent_number].waypoint_list.mission_waypoint.size(), agent_wp[agent_number].waypoint_list);
-	      form_waypoints(send_buf, agent_wp[agent_number].waypoint_list.mission_waypoint.size(), agent_wp[agent_number].waypoint_list);
+	      form_waypoint_info(send_buf, agent_wp[agent_number_wp].agent_number, agent_wp[agent_number_wp].waypoint_list.mission_waypoint.size(), agent_wp[agent_number_wp].waypoint_list);
+	      form_waypoints(send_buf, agent_wp[agent_number_wp].waypoint_list.mission_waypoint.size(), agent_wp[agent_number_wp].waypoint_list);
 	      form_checksum(send_buf);
 	      NEW_WP = false;
 	      string send_data(send_buf);
 	      USBPORT.write(send_data);
-	      cout<<"send waypoint to agent "<<agent_number<<endl;
+	      cout<<"send waypoint to agent "<<agent_number_wp<<endl;
 	    }
 	  break;
 	default:

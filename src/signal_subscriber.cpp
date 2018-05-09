@@ -52,7 +52,7 @@ int main(int argc, char **argv)
     
     enif_iuc::AgentTakeoff command;
     command.agent_number = count%3+1;
-    command.takeoff_command = true;
+    command.takeoff_command.data = true;
     //stuff_pub.publish(command);
     std_msgs::UInt8 data;
     data.data = 9;

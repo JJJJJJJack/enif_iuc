@@ -40,14 +40,6 @@ void battery_callback(const sensor_msgs::BatteryState &new_message)
   NEW_BATTERY = true;
 }
 
-bool get_takeoff_command(char* buf)
-{
-  if(CharToInt(buf[3]) == 0)
-    return false;
-  else
-    return true;
-}
-
 void form_mps(char* buf)
 {
   buf[1] = IntToChar(AGENT_NUMBER);
@@ -172,12 +164,15 @@ int main(int argc, char **argv)
 
       }
       case COMMAND_TAKEOFF:{
-	takeoff_command.data = get_takeoff_command(buf);
+	std_msgs::Bool cmd = get_takeoff_command(buf);
+	takeoff_command.data = cmd.data;
 	if(takeoff_command.data == true)
 	  cout<< " Takeoff"<<endl;
 	else
 	  cout<< " Land"<<endl;
 	checksum_result = checksum(buf);
+	string send_data(buf);
+	USBPORT.write(send_data);
 	//string send_data;
 	//if(checksum_result)
 	//  takeoff_pub.publish(takeoff_command);

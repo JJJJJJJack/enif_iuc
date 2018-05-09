@@ -1,2 +1,2 @@
 int8 agent_number
-bool takeoff_command
+std_msgs/Bool takeoff_command

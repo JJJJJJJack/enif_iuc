@@ -143,6 +143,16 @@ void form_checksum(char* buf)
   buf[0] = sum;
 }
 
+std_msgs::Bool get_takeoff_command(char* buf)
+{
+  std_msgs::Bool result;
+  if(CharToInt(buf[3]) == 0)
+    result.data = false ;
+  else
+    result.data = true;
+  return result;
+}
+
 int get_waypoint_number(char* buf)
 {
   return CharToInt(buf[3]);
