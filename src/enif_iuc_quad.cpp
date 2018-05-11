@@ -1,5 +1,14 @@
 #include "enif.h"
 
+#include "enif_iuc/AgentTakeoff.h"
+#include "enif_iuc/AgentWaypointTask.h"
+#include "enif_iuc/AgentGlobalPosition.h"
+#include "enif_iuc/AgentMPS.h"
+#include "enif_iuc/AgentState.h"
+#include "enif_iuc/AgentHeight.h"
+#include "enif_iuc/AgentBatteryState.h"
+#include "enif_iuc/AgentBox.h"
+
 bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false;
 
 using namespace std;
@@ -25,7 +34,7 @@ void mps_callback(const mps_driver::MPS &new_message)
 void GPS_callback(const sensor_msgs::NavSatFix &new_message)
 {
   gps = new_message;
-  NEW_GPS = true;
+  NEW_MPS = true;
 }
 
 void height_callback(const sensor_msgs::Range &new_message)
@@ -49,9 +58,12 @@ void form_mps(char* buf)
   FloatToChar(buf+4+4, mps.temperature);
   FloatToChar(buf+4+8, mps.pressure);
   FloatToChar(buf+4+12, mps.humidity);
-  DoubleToChar(buf+4+16, mps.GPS_latitude);
-  DoubleToChar(buf+4+24, mps.GPS_longitude);
-  buf[4+32] = 0x0A;
+  DoubleToChar(buf+4+16, gps.latitude);
+  DoubleToChar(buf+4+24, gps.longitude);
+  DoubleToChar(buf+4+32, height.range);
+  buf[4+40] = 0x0A;
+  // Clear the percentLEL to make sure we don't pub wrong data when we get new GPS
+  clearmps();
 }
 
 void form_GPS(char* buf)
@@ -90,11 +102,13 @@ int main(int argc, char **argv)
   ros::Publisher  takeoff_pub = n.advertise<std_msgs::Bool>("takeoff_command", 1);
   ros::Publisher  wp_pub      = n.advertise<enif_iuc::WaypointTask>("waypoint_list", 1);
   ros::Publisher  box_pub     = n.advertise<std_msgs::Float64MultiArray>("rotated_box", 1);
+  ros::Publisher  mps_pub      = n.advertise<enif_iuc::AgentMPS>("agent_mps_data", 1);
+  ros::Publisher  GPS_pub      = n.advertise<enif_iuc::AgentGlobalPosition>("agent_global_position", 1);
   // Subscribe topics from onboard ROS and transmit it through Xbee
   ros::Subscriber sub_state   = n.subscribe("agentState",1,state_callback);
   ros::Subscriber sub_mps     = n.subscribe("mps_data",1,mps_callback);
   ros::Subscriber sub_GPS     = n.subscribe("mavros/global_position/global",1,GPS_callback);
-  ros::Subscriber sub_height  = n.subscribe("ext_height",1,height_callback);
+  ros::Subscriber sub_height  = n.subscribe("mavros/distance_sensor/lidarlite_pub",1,height_callback);
   ros::Subscriber sub_battery = n.subscribe("mavros/battery",1,battery_callback);
 
   n.getParam("/enif_iuc_quad/AGENT_NUMBER", AGENT_NUMBER);
@@ -128,6 +142,38 @@ int main(int argc, char **argv)
     int target_number = get_target_number(buf);
     //cout<<"Target number: "<<target_number<<endl;
     if(target_number != AGENT_NUMBER){
+      // Get command type
+      cout<<"Receiving command: ";
+      int command_type = get_command_type(buf);
+      bool checksum_result = false;
+      enif_iuc::AgentMPS agent_mps;
+      enif_iuc::AgentGlobalPosition agent_gps;	      
+      sensor_msgs::NavSatFix my_gps = gps;
+      mps_driver::MPS my_mps = mps;
+      switch(command_type){
+      case COMMAND_MPS:
+	//form mps and publish
+	get_mps(buf);
+	agent_mps.agent_number = target_number;
+	agent_mps.mps = mps;
+	checksum_result = checksum(buf);
+	if(checksum_result)
+	  if(mps.percentLEL != 0)
+	    mps_pub.publish(agent_mps);
+	  else{
+	    agent_gps.agent_number = target_number;
+	    extract_GPS_from_MPS(mps);
+	    agent_gps.gps = gps;
+	    GPS_pub.publish(agent_gps);
+	  }
+	if(NEW_MPS || NEW_GPS){
+	  mps = my_mps; gps = my_gps;
+	}
+	cout<<" Info from agent."<<target_number<<endl;
+	break;
+      default:
+	break;
+      }
       //Do nothing if target number doesn't match
     }else{
       // Get command type

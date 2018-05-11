@@ -59,16 +59,10 @@ bool check_box(std_msgs::Float64MultiArray sendbox, std_msgs::Float64MultiArray 
   bool result = false;
   if(sendbox.data.size() != responsebox.data.size())
     return false;
-  if(fabs(sendbox.data[0] - responsebox.data[0])>1.0)
-    return false;
-  else if(fabs(sendbox.data[1] - responsebox.data[1])>1.0)
-    return false;
-  else if(fabs(sendbox.data[2] - responsebox.data[2])>1.0)
-    return false;
-  else if(fabs(sendbox.data[3] - responsebox.data[3])>1.0)
-    return false;
-  else if(fabs(sendbox.data[4] - responsebox.data[4])>1.0)
-    return false;
+  for(int i = 0; i < 7; i++){
+    if(fabs(sendbox.data[i]-responsebox.data[i])>1.0)
+      return false;
+  }
   return true;
 }
 
@@ -108,35 +102,6 @@ void box_callback(const enif_iuc::AgentBox &new_message)
 void get_state(char* buf)
 {
   state.data = CharToInt(buf[3]);
-}
-
-void get_mps(char* buf)
-{
-  GAS_ID = CharToInt(buf[3]);
-  if(GAS_ID == GAS_PROPANE){
-    string str = "Propane";
-    mps.gasID = str;
-  }else if(GAS_ID == GAS_METHANE){
-    string str = "Methane";
-    mps.gasID = str;
-  }else{
-    string str = "None";
-    mps.gasID = str;
-  }
-  float percentLEL, temperature, pressure, humidity;
-  double GPS_latitude, GPS_longitude;
-  CharToFloat(buf+4, percentLEL);
-  mps.percentLEL = percentLEL;
-  CharToFloat(buf+4+4, temperature);
-  mps.temperature = temperature;
-  CharToFloat(buf+4+8, pressure);
-  mps.pressure = pressure;
-  CharToFloat(buf+4+12, humidity);
-  mps.humidity = humidity;
-  CharToDouble(buf+4+16, GPS_latitude);
-  mps.GPS_latitude = GPS_latitude;
-  CharToDouble(buf+4+24, GPS_longitude);
-  mps.GPS_longitude = GPS_longitude;
 }
 
 void get_GPS(char* buf)
@@ -206,7 +171,11 @@ void form_box(char* buf, int agent_number, std_msgs::Float64MultiArray &box)
   DoubleToChar(buf+19, box.data[2]);
   DoubleToChar(buf+27, box.data[3]);
   buf[28] = IntToChar((int)box.data[4]);
-  buf[29] = 0x0A;
+  buf[29] = IntToChar((int)box.data[5]);
+  buf[30] = IntToChar((int)box.data[6]);
+  buf[31] = IntToChar((int)box.data[7]);
+  buf[32] = IntToChar((int)box.data[8]);
+  buf[33] = 0x0A;
 }
 
 int main(int argc, char **argv)
@@ -220,7 +189,7 @@ int main(int argc, char **argv)
   ros::Publisher  height_pub   = n.advertise<enif_iuc::AgentHeight>("ext_height", 1);
   ros::Publisher  battery_pub  = n.advertise<enif_iuc::AgentBatteryState>("battery", 1);
   ros::Subscriber sub_takeoff  = n.subscribe("takeoff_command",5,takeoff_callback);
-  ros::Subscriber sub_wp       = n.subscribe("waypoint_list",1,wp_callback);
+  ros::Subscriber sub_wp       = n.subscribe("waypoint_list",5,wp_callback);
   ros::Subscriber sub_box      = n.subscribe("rotated_box",1,box_callback);
   
   ros::Rate loop_rate(100);
@@ -284,7 +253,17 @@ int main(int argc, char **argv)
 	agent_mps.mps = mps;
 	checksum_result = checksum(buf);
 	if(checksum_result)
-	  mps_pub.publish(agent_mps);
+	  if(mps.percentLEL != 0)
+	    mps_pub.publish(agent_mps);
+	  else{
+	    agent_gps.agent_number = target_number;
+	    extract_GPS_from_MPS(mps);
+	    agent_gps.gps = gps;
+	    agent_height.agent_number = target_number;
+	    agent_height.height = height;
+	    height_pub.publish(agent_height);
+	    GPS_pub.publish(agent_gps);
+	  }
 	break;
       case COMMAND_STATE:
 	//form state and publish

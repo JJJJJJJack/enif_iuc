@@ -31,6 +31,8 @@
 #include "mps_driver/MPS.h"
 #include <string>
 
+using namespace std;
+
 #define COMMAND_TAKEOFF  1
 #define COMMAND_WAYPOINT 2
 #define COMMAND_GPS      3
@@ -197,14 +199,67 @@ void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypo
 void get_box(char* buf, std_msgs::Float64MultiArray &box)
 {
   double latitude, longitude, width, height, angle;
+  double staytime, wp_height, velocity, wp_radius;
   CharToDouble(buf+3,  longitude);
   CharToDouble(buf+11, latitude);
   CharToDouble(buf+19, width);
   CharToDouble(buf+27, height);
-  angle = CharToInt(buf[28]);
+  angle     = CharToInt(buf[28]);
+  staytime  = CharToInt(buf[29]);
+  wp_height = CharToInt(buf[30]);
+  velocity  = CharToInt(buf[31]);
+  wp_radius = CharToInt(buf[32]);
   box.data.push_back(longitude);
   box.data.push_back(latitude);
   box.data.push_back(width);
   box.data.push_back(height);
   box.data.push_back(angle);
+  box.data.push_back(staytime);
+  box.data.push_back(wp_height);
+  box.data.push_back(velocity);
+  box.data.push_back(wp_radius);
+}
+
+void extract_GPS_from_MPS(mps_driver::MPS mps_read)
+{
+  gps.latitude = mps_read.GPS_latitude;
+  gps.longitude = mps_read.GPS_longitude;
+  height.range = mps_read.GPS_altitude;
+}
+
+void get_mps(char* buf)
+{
+  GAS_ID = CharToInt(buf[3]);
+  if(GAS_ID == GAS_PROPANE){
+    string str = "Propane";
+    mps.gasID = str;
+  }else if(GAS_ID == GAS_METHANE){
+    string str = "Methane";
+    mps.gasID = str;
+  }else{
+    string str = "None";
+    mps.gasID = str;
+  }
+  float percentLEL, temperature, pressure, humidity;
+  double GPS_latitude, GPS_longitude;
+  CharToFloat(buf+4, percentLEL);
+  mps.percentLEL = percentLEL;
+  CharToFloat(buf+4+4, temperature);
+  mps.temperature = temperature;
+  CharToFloat(buf+4+8, pressure);
+  mps.pressure = pressure;
+  CharToFloat(buf+4+12, humidity);
+  mps.humidity = humidity;
+  CharToDouble(buf+4+16, GPS_latitude);
+  mps.GPS_latitude = GPS_latitude;
+  CharToDouble(buf+4+24, GPS_longitude);
+  mps.GPS_longitude = GPS_longitude;
+}
+
+void clearmps()
+{
+  mps.percentLEL = 0;
+  mps.temperature = 0;
+  mps.pressure = 0;
+  mps.humidity = 0;
 }
