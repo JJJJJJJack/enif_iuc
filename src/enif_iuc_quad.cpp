@@ -224,6 +224,10 @@ int main(int argc, char **argv)
 	//  takeoff_pub.publish(takeoff_command);
 	break;
       }
+      case COMMAND_GPS:{
+	cout<<"my own GPS"<<endl;
+	break;
+      }
       default:
 	break;
       }
