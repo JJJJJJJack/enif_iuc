@@ -103,7 +103,6 @@ int main(int argc, char **argv)
   ros::Publisher  wp_pub      = n.advertise<enif_iuc::WaypointTask>("waypoint_list", 1);
   ros::Publisher  box_pub     = n.advertise<std_msgs::Float64MultiArray>("rotated_box", 1);
   ros::Publisher  mps_pub      = n.advertise<enif_iuc::AgentMPS>("agent_mps_data", 1);
-  ros::Publisher  GPS_pub      = n.advertise<enif_iuc::AgentGlobalPosition>("agent_global_position", 1);
   // Subscribe topics from onboard ROS and transmit it through Xbee
   ros::Subscriber sub_state   = n.subscribe("agentState",1,state_callback);
   ros::Subscriber sub_mps     = n.subscribe("mps_data",1,mps_callback);
@@ -147,7 +146,6 @@ int main(int argc, char **argv)
 	int command_type = get_command_type(buf);
 	bool checksum_result = false;
 	enif_iuc::AgentMPS agent_mps;
-	enif_iuc::AgentGlobalPosition agent_gps;	      
 	sensor_msgs::NavSatFix my_gps = gps;
 	mps_driver::MPS my_mps = mps;
 	switch(command_type){
@@ -159,14 +157,7 @@ int main(int argc, char **argv)
 	  agent_mps.mps = mps;
 	  checksum_result = checksum(buf);
 	  if(checksum_result)
-	    if(mps.percentLEL != 0)
-	      mps_pub.publish(agent_mps);
-	    else{
-	      agent_gps.agent_number = target_number;
-	      extract_GPS_from_MPS(mps);
-	      agent_gps.gps = gps;
-	      GPS_pub.publish(agent_gps);
-	    }
+	    mps_pub.publish(agent_mps);
 	  if(NEW_MPS || NEW_GPS){
 	    mps = my_mps; gps = my_gps;
 	  }
