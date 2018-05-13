@@ -225,6 +225,7 @@ void extract_GPS_from_MPS(mps_driver::MPS mps_read)
   gps.latitude = mps_read.GPS_latitude;
   gps.longitude = mps_read.GPS_longitude;
   height.range = mps_read.GPS_altitude;
+  cout<<mps_read.GPS_latitude<<"  "<<mps.GPS_longitude<<endl;;
 }
 
 void get_mps(char* buf)

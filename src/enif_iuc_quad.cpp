@@ -142,37 +142,40 @@ int main(int argc, char **argv)
     int target_number = get_target_number(buf);
     //cout<<"Target number: "<<target_number<<endl;
     if(target_number != AGENT_NUMBER){
-      // Get command type
-      cout<<"Receiving command: ";
-      int command_type = get_command_type(buf);
-      bool checksum_result = false;
-      enif_iuc::AgentMPS agent_mps;
-      enif_iuc::AgentGlobalPosition agent_gps;	      
-      sensor_msgs::NavSatFix my_gps = gps;
-      mps_driver::MPS my_mps = mps;
-      switch(command_type){
-      case COMMAND_MPS:
-	//form mps and publish
-	get_mps(buf);
-	agent_mps.agent_number = target_number;
-	agent_mps.mps = mps;
-	checksum_result = checksum(buf);
-	if(checksum_result)
-	  if(mps.percentLEL != 0)
-	    mps_pub.publish(agent_mps);
-	  else{
-	    agent_gps.agent_number = target_number;
-	    extract_GPS_from_MPS(mps);
-	    agent_gps.gps = gps;
-	    GPS_pub.publish(agent_gps);
+      if(target_number > 0){
+	// Get command type
+	cout<<"Receiving other quad info: ";
+	int command_type = get_command_type(buf);
+	bool checksum_result = false;
+	enif_iuc::AgentMPS agent_mps;
+	enif_iuc::AgentGlobalPosition agent_gps;	      
+	sensor_msgs::NavSatFix my_gps = gps;
+	mps_driver::MPS my_mps = mps;
+	cout<<"command type: "<<command_type<<endl;
+	switch(command_type){
+	case COMMAND_MPS:
+	  //form mps and publish
+	  get_mps(buf);
+	  agent_mps.agent_number = target_number;
+	  agent_mps.mps = mps;
+	  checksum_result = checksum(buf);
+	  if(checksum_result)
+	    if(mps.percentLEL != 0)
+	      mps_pub.publish(agent_mps);
+	    else{
+	      agent_gps.agent_number = target_number;
+	      extract_GPS_from_MPS(mps);
+	      agent_gps.gps = gps;
+	      GPS_pub.publish(agent_gps);
+	    }
+	  if(NEW_MPS || NEW_GPS){
+	    mps = my_mps; gps = my_gps;
 	  }
-	if(NEW_MPS || NEW_GPS){
-	  mps = my_mps; gps = my_gps;
+	  cout<<" Info from agent."<<target_number<<endl;
+	  break;
+	default:
+	  break;
 	}
-	cout<<" Info from agent."<<target_number<<endl;
-	break;
-      default:
-	break;
       }
       //Do nothing if target number doesn't match
     }else{
