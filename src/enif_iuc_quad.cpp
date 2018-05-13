@@ -144,17 +144,16 @@ int main(int argc, char **argv)
     if(target_number != AGENT_NUMBER){
       if(target_number > 0){
 	// Get command type
-	cout<<"Receiving other quad info: ";
 	int command_type = get_command_type(buf);
 	bool checksum_result = false;
 	enif_iuc::AgentMPS agent_mps;
 	enif_iuc::AgentGlobalPosition agent_gps;	      
 	sensor_msgs::NavSatFix my_gps = gps;
 	mps_driver::MPS my_mps = mps;
-	cout<<"command type: "<<command_type<<endl;
 	switch(command_type){
 	case COMMAND_MPS:
 	  //form mps and publish
+	  cout<<"Receiving other quad info ";
 	  get_mps(buf);
 	  agent_mps.agent_number = target_number;
 	  agent_mps.mps = mps;
@@ -171,7 +170,7 @@ int main(int argc, char **argv)
 	  if(NEW_MPS || NEW_GPS){
 	    mps = my_mps; gps = my_gps;
 	  }
-	  cout<<" Info from agent."<<target_number<<endl;
+	  cout<<"from Agent."<<target_number<<endl;
 	  break;
 	default:
 	  break;

@@ -110,6 +110,13 @@ void CharToFloat(char* buf, float &number)
   }
 }
 
+bool checkValue(double var, double min, double max)
+{
+  if(var>=min && var<=max)
+    return true;
+  return false;
+}
+
 int get_target_number(char* buf)
 {
   int number = CharToInt(buf[1]);
@@ -220,12 +227,17 @@ void get_box(char* buf, std_msgs::Float64MultiArray &box)
   box.data.push_back(wp_radius);
 }
 
-void extract_GPS_from_MPS(mps_driver::MPS mps_read)
+bool extract_GPS_from_MPS(mps_driver::MPS mps_read)
 {
-  gps.latitude = mps_read.GPS_latitude;
-  gps.longitude = mps_read.GPS_longitude;
-  height.range = mps_read.GPS_altitude;
-  cout<<mps_read.GPS_latitude<<"  "<<mps.GPS_longitude<<endl;;
+  if(checkValue(mps_read.GPS_latitude, -180, 180) &&
+     checkValue(mps_read.GPS_longitude, -180, 180) &&
+     checkValue(mps_read.GPS_altitude, 0, 40)){
+    gps.latitude = mps_read.GPS_latitude;
+    gps.longitude = mps_read.GPS_longitude;
+    height.range = mps_read.GPS_altitude;
+    return true;
+  }
+  return false;
 }
 
 void get_mps(char* buf)

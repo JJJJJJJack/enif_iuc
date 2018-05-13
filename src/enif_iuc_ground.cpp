@@ -257,12 +257,13 @@ int main(int argc, char **argv)
 	    mps_pub.publish(agent_mps);
 	  else{
 	    agent_gps.agent_number = target_number;
-	    extract_GPS_from_MPS(mps);
-	    agent_gps.gps = gps;
-	    agent_height.agent_number = target_number;
-	    agent_height.height = height;
-	    height_pub.publish(agent_height);
-	    GPS_pub.publish(agent_gps);
+	    if(extract_GPS_from_MPS(mps) == true){
+	      agent_gps.gps = gps;
+	      agent_height.agent_number = target_number;
+	      agent_height.height = height;
+	      height_pub.publish(agent_height);
+	      GPS_pub.publish(agent_gps);
+	    }
 	  }
 	break;
       case COMMAND_STATE:
