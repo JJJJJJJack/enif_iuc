@@ -211,11 +211,11 @@ void get_box(char* buf, std_msgs::Float64MultiArray &box)
   CharToDouble(buf+11, latitude);
   CharToDouble(buf+19, width);
   CharToDouble(buf+27, height);
-  angle     = CharToInt(buf[28]);
-  staytime  = CharToInt(buf[29]);
-  wp_height = CharToInt(buf[30]);
-  velocity  = CharToInt(buf[31]);
-  wp_radius = CharToInt(buf[32]);
+  angle     = CharToInt(buf[35]);
+  staytime  = CharToInt(buf[36]);
+  wp_height = CharToInt(buf[37]);
+  velocity  = CharToInt(buf[38]);
+  wp_radius = CharToInt(buf[39]);
   box.data.push_back(longitude);
   box.data.push_back(latitude);
   box.data.push_back(width);

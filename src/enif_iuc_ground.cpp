@@ -170,12 +170,12 @@ void form_box(char* buf, int agent_number, std_msgs::Float64MultiArray &box)
   DoubleToChar(buf+11, box.data[1]);
   DoubleToChar(buf+19, box.data[2]);
   DoubleToChar(buf+27, box.data[3]);
-  buf[28] = IntToChar((int)box.data[4]);
-  buf[29] = IntToChar((int)box.data[5]);
-  buf[30] = IntToChar((int)box.data[6]);
-  buf[31] = IntToChar((int)box.data[7]);
-  buf[32] = IntToChar((int)box.data[8]);
-  buf[33] = 0x0A;
+  buf[35] = IntToChar((int)box.data[4]);
+  buf[36] = IntToChar((int)box.data[5]);
+  buf[37] = IntToChar((int)box.data[6]);
+  buf[38] = IntToChar((int)box.data[7]);
+  buf[39] = IntToChar((int)box.data[8]);
+  buf[40] = 0x0A;
 }
 
 int main(int argc, char **argv)
@@ -341,6 +341,7 @@ int main(int argc, char **argv)
 	      string send_data(send_buf);
 	      USBPORT.write(send_data);
 	      cout<<"send box to agent "<<agent_number_box<<endl;
+	      cout<<agent_box[agent_number_box].box<<endl;
 	    }
 	  else if(waypoint_checked[agent_number_wp] == false && agent_number_wp > 0)
 	    {
