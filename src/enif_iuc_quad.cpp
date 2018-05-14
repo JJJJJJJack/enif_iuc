@@ -226,9 +226,11 @@ int main(int argc, char **argv)
       }
       if(checksum_result)
 	{
-	  wp_pub.publish(waypoint_list);
+	  if(command_type == COMMAND_WAYPOINT)
+	    wp_pub.publish(waypoint_list);
 	  takeoff_pub.publish(takeoff_command);
-	  box_pub.publish(box);
+	  if(command_type == COMMAND_BOX)
+	    box_pub.publish(box);
 	}
     }
     // Send GPS mps state and battery data every 1 sec
