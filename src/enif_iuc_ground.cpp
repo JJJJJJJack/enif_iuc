@@ -170,12 +170,12 @@ void form_box(char* buf, int agent_number, std_msgs::Float64MultiArray &box)
   DoubleToChar(buf+11, box.data[1]);
   DoubleToChar(buf+19, box.data[2]);
   DoubleToChar(buf+27, box.data[3]);
-  buf[35] = IntToChar((int)box.data[4]);
-  buf[36] = IntToChar((int)box.data[5]);
-  buf[37] = IntToChar((int)box.data[6]);
-  buf[38] = IntToChar((int)box.data[7]);
-  buf[39] = IntToChar((int)box.data[8]);
-  buf[40] = 0x0A;
+  DoubleToChar(buf+35, box.data[4]);
+  buf[43] = IntToChar((int)box.data[5]);
+  buf[44] = IntToChar((int)box.data[6]);
+  buf[45] = IntToChar((int)box.data[7]);
+  buf[46] = IntToChar((int)box.data[8]);
+  buf[47] = 0x0A;
 }
 
 int main(int argc, char **argv)
