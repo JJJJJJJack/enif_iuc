@@ -76,10 +76,8 @@ void DoubleToChar(char* buf, double number)
   chptr = (unsigned char *) &number;
   for(int i = 0; i<sizeof(double); i++){
     buf[i] = *chptr;
-    printf("%x",buf[i]);
     chptr++;
   }
-  cout<<endl;
 }
 
 void FloatToChar(char* buf, float number)
