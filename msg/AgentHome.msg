@@ -1,0 +1,2 @@
+uint8 agent_number
+mavros_msgs/HomePosition home

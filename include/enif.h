@@ -20,6 +20,8 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "geometry_msgs/PoseStamped.h"
+#include <mavros_msgs/HomePosition.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include "std_msgs/UInt8.h"
 #include "std_msgs/Bool.h"
 #include "sensor_msgs/NavSatFix.h"
@@ -40,6 +42,8 @@ using namespace std;
 #define COMMAND_STATE    5
 #define COMMAND_BATTERY  6
 #define COMMAND_BOX      7
+#define COMMAND_HOME     8
+#define COMMAND_LOCAL    9
 
 #define GAS_NONE    0
 #define GAS_PROPANE 1
@@ -55,6 +59,9 @@ sensor_msgs::NavSatFix gps;
 mps_driver::MPS mps;
 sensor_msgs::Range height;
 sensor_msgs::BatteryState battery;
+
+mavros_msgs::HomePosition home;
+geometry_msgs::PoseWithCovarianceStamped local;
 
 std_msgs::Bool takeoff_command;
 enif_iuc::WaypointTask waypoint_list;
@@ -267,6 +274,42 @@ void get_mps(char* buf)
   mps.GPS_latitude = GPS_latitude;
   CharToDouble(buf+4+24, GPS_longitude);
   mps.GPS_longitude = GPS_longitude;
+}
+
+void get_local(char* buf)
+{
+  double pX, pY, pZ, oX, oY, oZ, oW;
+  
+  CharToDouble(buf+3, pX);
+  local.pose.pose.position.x = pX;
+  CharToDouble(buf+11, pY);
+  local.pose.pose.position.y = pY;
+  CharToDouble(buf+19, pZ);
+  local.pose.pose.position.z = pZ;
+
+  CharToDouble(buf+27, oX);
+  local.pose.pose.orientation.x = oX;
+  CharToDouble(buf+35, oY);
+  local.pose.pose.orientation.y = oY;
+  CharToDouble(buf+43, oZ);
+  local.pose.pose.orientation.z = oZ;
+  CharToDouble(buf+51, oW);
+  local.pose.pose.orientation.w = oW;
+
+}
+
+void get_home(char* buf)
+{
+  double latitude, longitude;
+  float altitude;
+  
+  CharToDouble(buf+3, latitude);
+  home.geo.latitude = latitude;  
+  CharToDouble(buf+11, longitude);
+  home.geo.longitude = longitude;
+  CharToFloat(buf+19, altitude);
+  home.geo.altitude = altitude;
+  
 }
 
 void clearmps()

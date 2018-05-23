@@ -12,7 +12,9 @@ find_package(catkin REQUIRED
   std_msgs
   sensor_msgs
   serial
-  message_generation)
+  message_generation
+  mavros_msgs
+  )
 
 ## Generate messages in the 'msg' folder
 add_message_files(
@@ -28,13 +30,15 @@ add_message_files(
   AgentGlobalPosition.msg
   AgentHeight.msg
   AgentBatteryState.msg
+  AgentHome.msg
+  AgentLocal.msg
 #   Message2.msg
 )
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  std_msgs mps_driver sensor_msgs
+  std_msgs mps_driver sensor_msgs mavros_msgs geometry_msgs
   # Or other packages containing msgs
 )
 

@@ -8,8 +8,10 @@
 #include "enif_iuc/AgentHeight.h"
 #include "enif_iuc/AgentBatteryState.h"
 #include "enif_iuc/AgentBox.h"
+#include "enif_iuc/AgentHome.h"
+#include "enif_iuc/AgentLocal.h"
 
-bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false;
+bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false, NEW_HOME = false, NEW_LOCAL = false;
 
 using namespace std;
 
@@ -17,6 +19,18 @@ void state_callback(const std_msgs::UInt8 &new_message)
 {
   state = new_message;
   NEW_STATE = true;
+}
+
+void home_callback(const mavros_msgs::HomePosition &new_message)
+{
+  home = new_message;
+  NEW_HOME = true;
+}
+
+void local_callback(const geometry_msgs::PoseWithCovarianceStamped &new_message)
+{
+  local = new_message;
+  NEW_LOCAL = true;
 }
 
 void mps_callback(const mps_driver::MPS &new_message)
@@ -66,6 +80,31 @@ void form_mps(char* buf)
   clearmps();
 }
 
+void form_local(char* buf)
+{
+  buf[1] = IntToChar(AGENT_NUMBER); // 1 byte
+  buf[2] = IntToChar(COMMAND_LOCAL);
+  DoubleToChar(buf+3, local.pose.pose.position.x);
+  DoubleToChar(buf+11, local.pose.pose.position.y);
+  DoubleToChar(buf+19, local.pose.pose.position.z);
+  DoubleToChar(buf+27, local.pose.pose.orientation.x);
+  DoubleToChar(buf+35, local.pose.pose.orientation.y);
+  DoubleToChar(buf+43, local.pose.pose.orientation.z);
+  DoubleToChar(buf+51, local.pose.pose.orientation.w);
+  buf[51+8] = 0x0A;
+}
+
+void form_home(char* buf)
+{
+  buf[1] = IntToChar(AGENT_NUMBER);
+  buf[2] = IntToChar(COMMAND_HOME);
+  DoubleToChar(buf+3, home.geo.latitude);
+  DoubleToChar(buf+11, home.geo.longitude);
+  FloatToChar(buf+19, home.geo.altitude);  
+  buf[19+4] = 0x0A;
+}
+
+
 void form_GPS(char* buf)
 {
   buf[1] = IntToChar(AGENT_NUMBER);
@@ -102,13 +141,23 @@ int main(int argc, char **argv)
   ros::Publisher  takeoff_pub = n.advertise<std_msgs::Bool>("takeoff_command", 1);
   ros::Publisher  wp_pub      = n.advertise<enif_iuc::WaypointTask>("waypoint_list", 1);
   ros::Publisher  box_pub     = n.advertise<std_msgs::Float64MultiArray>("rotated_box", 1);
-  ros::Publisher  mps_pub      = n.advertise<enif_iuc::AgentMPS>("agent_mps_data", 1);
+  ros::Publisher  mps_pub     = n.advertise<enif_iuc::AgentMPS>("agent_mps_data", 1);
+
+  
+  ros::Publisher  home_pub    = n.advertise<enif_iuc::AgentHome>("agent_home_data", 1);
+  ros::Publisher  local_pub   = n.advertise<enif_iuc::AgentLocal>("agent_local_data", 1);
+
+  
   // Subscribe topics from onboard ROS and transmit it through Xbee
   ros::Subscriber sub_state   = n.subscribe("agentState",1,state_callback);
   ros::Subscriber sub_mps     = n.subscribe("mps_data",1,mps_callback);
   ros::Subscriber sub_GPS     = n.subscribe("mavros/global_position/global",1,GPS_callback);
   ros::Subscriber sub_height  = n.subscribe("mavros/distance_sensor/lidarlite_pub",1,height_callback);
   ros::Subscriber sub_battery = n.subscribe("mavros/battery",1,battery_callback);
+
+  ros::Subscriber sub_home    = n.subscribe("/mavros/home_position/home",1,home_callback);
+  ros::Subscriber sub_local   = n.subscribe("/mavros/global_position/local",1,local_callback);
+
 
   n.getParam("/enif_iuc_quad/AGENT_NUMBER", AGENT_NUMBER);
   cout<<"This is Agent No."<<AGENT_NUMBER<<endl;
@@ -145,21 +194,56 @@ int main(int argc, char **argv)
 	// Get command type
 	int command_type = get_command_type(buf);
 	bool checksum_result = false;
-	enif_iuc::AgentMPS agent_mps;
+	enif_iuc::AgentMPS agent_mps;	
+	enif_iuc::AgentHome agent_home;
+	enif_iuc::AgentLocal agent_local;
+	
 	sensor_msgs::NavSatFix my_gps = gps;
 	mps_driver::MPS my_mps = mps;
+	
+	mavros_msgs::HomePosition my_home;
+	geometry_msgs::PoseWithCovarianceStamped my_local = local;
+	
 	switch(command_type){
 	case COMMAND_MPS:
 	  //form mps and publish
-	  cout<<"Receiving other quad info ";
+	  cout<<"Receiving mps quad info ";
 	  get_mps(buf);
 	  agent_mps.agent_number = target_number;
 	  agent_mps.mps = mps;
 	  checksum_result = checksum(buf);
-	  if(checksum_result)
+	  if(checksum_result && extract_GPS_from_MPS(mps))
 	    mps_pub.publish(agent_mps);
-	  if(NEW_MPS || NEW_GPS){
+	  if(NEW_MPS){
 	    mps = my_mps; gps = my_gps;
+	  }
+	  cout<<"from Agent."<<target_number<<endl;
+	  break;
+	case COMMAND_HOME:
+	  //form home and publish
+	  cout<<"Receiving home quad info ";	  
+	  get_home(buf);
+	  agent_home.agent_number = target_number;
+	  agent_home.home = home;
+	  checksum_result = checksum(buf);
+	  if(checksum_result)
+	    home_pub.publish(agent_home);
+	  if(NEW_HOME){
+	    home = my_home;
+	  }
+	  cout<<"from Agent."<<target_number<<endl;
+	  break;
+	case COMMAND_LOCAL:
+	  //form local and publish
+	  cout<<"Receiving local quad info ";
+	  get_local(buf);
+	  agent_local.agent_number = target_number;
+	  agent_local.local = local;
+	  checksum_result = checksum(buf);
+	  if(checksum_result)
+	    local_pub.publish(agent_local);
+	  if(NEW_LOCAL){
+	    local = my_local;
 	  }
 	  cout<<"from Agent."<<target_number<<endl;
 	  break;
@@ -167,7 +251,6 @@ int main(int argc, char **argv)
 	  break;
 	}
       }
-      //Do nothing if target number doesn't match
     }else{
       // Get command type
       cout<<"Receiving command: ";
@@ -248,15 +331,6 @@ int main(int argc, char **argv)
 	  }
 	  break;
 	case 1:
-	  if(NEW_GPS){
-	    form_GPS(send_buf);
-	    form_checksum(send_buf);
-	    string send_data(send_buf);
-	    USBPORT.write(send_data);
-	    NEW_GPS = false;
-	  }
-	  break;
-	case 2:
 	  if(NEW_STATE){
 	    form_state(send_buf);
 	    form_checksum(send_buf);
@@ -265,7 +339,24 @@ int main(int argc, char **argv)
 	    NEW_STATE = false;
 	  }
 	  break;
+	case 2:
+	  if(NEW_HOME){
+	    form_home(send_buf);
+	    form_checksum(send_buf);
+	    string send_data(send_buf);
+	    NEW_HOME = false;
+	  }
+	  break;
 	case 3:
+	  if(NEW_LOCAL){
+	    form_local(send_buf);
+	    form_checksum(send_buf);
+	    string send_data(send_buf);
+	    NEW_LOCAL = false;
+	  }
+	  break;
+	  /*
+	case 2:
 	  if(NEW_BATTERY){
 	    form_battery(send_buf);
 	    form_checksum(send_buf);
@@ -274,10 +365,11 @@ int main(int argc, char **argv)
 	    NEW_BATTERY = false;
 	  }
 	  break;
+	  */
 	default:
 	  break;
 	}
-	if(send_count < 3) send_count++;
+	if(send_count < 4) send_count++;
 	else send_count = 0;
       }
     
