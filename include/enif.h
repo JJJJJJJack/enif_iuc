@@ -280,22 +280,21 @@ void get_local(char* buf)
 {
   double pX, pY, pZ, oX, oY, oZ, oW;
   
-  CharToDouble(buf+3, pX);
-  local.pose.pose.position.x = pX;
-  CharToDouble(buf+11, pY);
-  local.pose.pose.position.y = pY;
+  CharToDouble(buf+3, pX);  
+  CharToDouble(buf+11, pY);  
   CharToDouble(buf+19, pZ);
-  local.pose.pose.position.z = pZ;
-
-  CharToDouble(buf+27, oX);
-  local.pose.pose.orientation.x = oX;
+  CharToDouble(buf+27, oX);  
   CharToDouble(buf+35, oY);
-  local.pose.pose.orientation.y = oY;
-  CharToDouble(buf+43, oZ);
-  local.pose.pose.orientation.z = oZ;
+  CharToDouble(buf+43, oZ);  
   CharToDouble(buf+51, oW);
-  local.pose.pose.orientation.w = oW;
 
+  local.pose.pose.position.x    = pX;
+  local.pose.pose.position.y    = pY;
+  local.pose.pose.position.z    = pZ;  
+  local.pose.pose.orientation.x = oX;
+  local.pose.pose.orientation.y = oY;
+  local.pose.pose.orientation.z = oZ;
+  local.pose.pose.orientation.w = oW;
 }
 
 void get_home(char* buf)
@@ -304,12 +303,12 @@ void get_home(char* buf)
   float altitude;
   
   CharToDouble(buf+3, latitude);
-  home.geo.latitude = latitude;  
   CharToDouble(buf+11, longitude);
-  home.geo.longitude = longitude;
   CharToFloat(buf+19, altitude);
-  home.geo.altitude = altitude;
   
+  home.geo.latitude = latitude;
+  home.geo.longitude = longitude;  
+  home.geo.altitude = altitude;
 }
 
 void clearmps()

@@ -100,7 +100,7 @@ void form_home(char* buf)
   buf[2] = IntToChar(COMMAND_HOME);
   DoubleToChar(buf+3, home.geo.latitude);
   DoubleToChar(buf+11, home.geo.longitude);
-  FloatToChar(buf+19, home.geo.altitude);  
+  FloatToChar(buf+19, home.geo.altitude);
   buf[19+4] = 0x0A;
 }
 
@@ -226,7 +226,7 @@ int main(int argc, char **argv)
 	  agent_home.agent_number = target_number;
 	  agent_home.home = home;
 	  checksum_result = checksum(buf);
-	  if(checksum_result)
+	  if(checksum_result)	    
 	    home_pub.publish(agent_home);
 	  if(NEW_HOME){
 	    home = my_home;
@@ -344,6 +344,7 @@ int main(int argc, char **argv)
 	    form_home(send_buf);
 	    form_checksum(send_buf);
 	    string send_data(send_buf);
+	    USBPORT.write(send_data);	    
 	    NEW_HOME = false;
 	  }
 	  break;
@@ -352,6 +353,7 @@ int main(int argc, char **argv)
 	    form_local(send_buf);
 	    form_checksum(send_buf);
 	    string send_data(send_buf);
+	    USBPORT.write(send_data);
 	    NEW_LOCAL = false;
 	  }
 	  break;
