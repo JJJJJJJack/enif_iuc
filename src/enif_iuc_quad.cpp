@@ -189,6 +189,7 @@ int main(int argc, char **argv)
     // Get the target number first
     int target_number = get_target_number(buf);
     //cout<<"Target number: "<<target_number<<endl;
+
     if(target_number != AGENT_NUMBER){
       if(target_number > 0){
 	// Get command type

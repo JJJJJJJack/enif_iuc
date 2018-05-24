@@ -31,7 +31,8 @@ bool check_takeoff(std_msgs::Bool sendtakeoff, std_msgs::Bool responsetakeoff)
 bool check_waypoints(enif_iuc::WaypointTask sendwp, enif_iuc::WaypointTask responsewp)
 {
   bool result = false;
-  if(fabs(sendwp.velocity - responsewp.velocity)>1.0 || fabs(sendwp.damping_distance - responsewp.damping_distance)>1.0)
+
+  if (sendwp.velocity != responsewp.velocity || sendwp.damping_distance != responsewp.damping_distance)
     return false;
   else
     if(sendwp.mission_waypoint.size() != responsewp.mission_waypoint.size())
@@ -39,16 +40,16 @@ bool check_waypoints(enif_iuc::WaypointTask sendwp, enif_iuc::WaypointTask respo
     else
       for(int i = 0; i < sendwp.mission_waypoint.size(); i++)
 	{
-	  if(fabs(sendwp.mission_waypoint[i].latitude - responsewp.mission_waypoint[i].latitude)>1.0)
+	  if(sendwp.mission_waypoint[i].latitude != responsewp.mission_waypoint[i].latitude)
 	    return false;
 	  else
-	    if(fabs(sendwp.mission_waypoint[i].longitude != responsewp.mission_waypoint[i].longitude)>1.0)
+	    if(sendwp.mission_waypoint[i].longitude != responsewp.mission_waypoint[i].longitude)
 	      return false;
 	    else
-	      if(fabs(sendwp.mission_waypoint[i].target_height - responsewp.mission_waypoint[i].target_height)>1.0)
+	      if(sendwp.mission_waypoint[i].target_height != responsewp.mission_waypoint[i].target_height)
 		return false;
 	      else
-		if(fabs(sendwp.mission_waypoint[i].staytime - responsewp.mission_waypoint[i].staytime)>1.0)
+		if(sendwp.mission_waypoint[i].staytime != responsewp.mission_waypoint[i].staytime)
 		  return false;
 	}
   return true;
@@ -60,7 +61,7 @@ bool check_box(std_msgs::Float64MultiArray sendbox, std_msgs::Float64MultiArray 
   if(sendbox.data.size() != responsebox.data.size())
     return false;
   for(int i = 0; i < 7; i++){
-    if(fabs(sendbox.data[i]-responsebox.data[i])>1.0)
+    if(sendbox.data[i]!=responsebox.data[i])
       return false;
   }
   return true;

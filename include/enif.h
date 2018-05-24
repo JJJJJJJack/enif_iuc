@@ -82,7 +82,7 @@ void DoubleToChar(char* buf, double number)
   unsigned char *chptr;
   chptr = (unsigned char *) &number;
   for(int i = 0; i<sizeof(double); i++){
-    buf[i] = *chptr;
+    buf[i] = *chptr + '0';
     chptr++;
   }
 }
@@ -102,7 +102,7 @@ void CharToDouble(char* buf, double &number)
   unsigned char *chptr;
   chptr = (unsigned char *) &number;
   for(int i = 0; i<sizeof(double); i++){
-    *chptr = buf[i];
+    *chptr = buf[i] - '0';
     chptr++;
   }
 }
