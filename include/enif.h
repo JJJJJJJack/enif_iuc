@@ -22,6 +22,7 @@
 #include "geometry_msgs/PoseStamped.h"
 #include <mavros_msgs/HomePosition.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <nav_msgs/Odometry.h>
 #include "std_msgs/UInt8.h"
 #include "std_msgs/Bool.h"
 #include "sensor_msgs/NavSatFix.h"
@@ -61,7 +62,7 @@ sensor_msgs::Range height;
 sensor_msgs::BatteryState battery;
 
 mavros_msgs::HomePosition home;
-geometry_msgs::PoseWithCovarianceStamped local;
+nav_msgs::Odometry local;
 
 std_msgs::Bool takeoff_command;
 enif_iuc::WaypointTask waypoint_list;

@@ -14,6 +14,7 @@ find_package(catkin REQUIRED
   serial
   message_generation
   mavros_msgs
+  nav_msgs
   )
 
 ## Generate messages in the 'msg' folder
@@ -38,7 +39,7 @@ add_message_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  std_msgs mps_driver sensor_msgs mavros_msgs geometry_msgs
+  std_msgs mps_driver sensor_msgs mavros_msgs geometry_msgs nav_msgs
   # Or other packages containing msgs
 )
 
@@ -76,7 +77,7 @@ add_executable(enif_iuc_publisher
 )
 
 
-## Specify libraries to link a library or executable target against
+# Specify libraries to link a library or executable target against
 target_link_libraries(enif_iuc_quad
   ${catkin_LIBRARIES}
 )

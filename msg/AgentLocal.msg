@@ -1,2 +1,3 @@
 uint8 agent_number
-geometry_msgs/PoseWithCovarianceStamped local
+nav_msgs/Odometry local
+#geometry_msgs/PoseWithCovarianceStamped local

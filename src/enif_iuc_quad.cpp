@@ -27,7 +27,7 @@ void home_callback(const mavros_msgs::HomePosition &new_message)
   NEW_HOME = true;
 }
 
-void local_callback(const geometry_msgs::PoseWithCovarianceStamped &new_message)
+void local_callback(const nav_msgs::Odometry &new_message)
 {
   local = new_message;
   NEW_LOCAL = true;
@@ -203,7 +203,7 @@ int main(int argc, char **argv)
 	mps_driver::MPS my_mps = mps;
 	
 	mavros_msgs::HomePosition my_home;
-	geometry_msgs::PoseWithCovarianceStamped my_local = local;
+	nav_msgs::Odometry my_local = local;
 	
 	switch(command_type){
 	case COMMAND_MPS:

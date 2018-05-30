@@ -21,6 +21,7 @@
   <build_depend>mps_driver</build_depend>
   <build_depend>mavros_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
+  <build_depend>nav_msgs</build_depend>
 
   <run_depend>roscpp</run_depend>
   <run_depend>rospy</run_depend>
@@ -30,6 +31,7 @@
   <run_depend>mps_driver</run_depend>
   <run_depend>mavros_msgs</run_depend>
   <run_depend>geometry_msgs</run_depend>
+  <run_depend>nav_msgs</run_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
