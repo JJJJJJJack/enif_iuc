@@ -244,6 +244,8 @@ bool extract_GPS_from_MPS(mps_driver::MPS mps_read)
     gps.longitude = mps_read.GPS_longitude;
     height.range = mps_read.GPS_altitude;
     return true;
+  }else{
+    cout<<mps_read.GPS_latitude<<" "<<mps_read.GPS_longitude<<" "<<mps_read.GPS_altitude<<endl;
   }
   return false;
 }
@@ -300,6 +302,8 @@ void get_mps(char* buf)
   mps.GPS_latitude = GPS_latitude;
   CharToDouble(buf+4+24, GPS_longitude);
   mps.GPS_longitude = GPS_longitude;
+  buf = buf + 44;
+  
 }
 
 void get_local(char* buf)
@@ -321,6 +325,7 @@ void get_local(char* buf)
   local.pose.pose.orientation.y = oY;
   local.pose.pose.orientation.z = oZ;
   local.pose.pose.orientation.w = oW;
+  buf = buf + 59;
 }
 
 void get_home(char* buf)
@@ -335,6 +340,7 @@ void get_home(char* buf)
   home.geo.latitude = latitude;
   home.geo.longitude = longitude;  
   home.geo.altitude = altitude;
+  buf = buf + 23;
 }
 
 void clearmps()

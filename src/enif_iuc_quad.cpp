@@ -1,3 +1,4 @@
+
 #include "enif.h"
 
 #include "enif_iuc/AgentTakeoff.h"
@@ -183,17 +184,23 @@ int main(int argc, char **argv)
 
   while (ros::ok())
   {
-    char buf[256] = {'\0'};
+    char charbuf[256] = {'\0'};
     string data = USBPORT.read(256+1);
-    strcpy(buf, data.c_str());
+    strcpy(charbuf, data.c_str());
+    char *buf = charbuf;
+    int command_type = get_command_type(buf);
+    while(buf[0] != '\0' && (command_type == COMMAND_MPS || command_type == COMMAND_HOME || command_type == COMMAND_LOCAL)){
+      command_type = get_command_type(buf);
+      //      cout<<strlen(buf)<<endl;
+      //ROS_INFO_THROTTLE(1,"%d",strlen(buf));
+      //printf("%x\n", buf[0]);
     // Get the target number first
     int target_number = get_target_number(buf);
-    //cout<<"Target number: "<<target_number<<endl;
 
     if(target_number != AGENT_NUMBER){
       if(target_number > 0){
 	// Get command type
-	int command_type = get_command_type(buf);
+
 	bool checksum_result = false;
 	enif_iuc::AgentMPS agent_mps;	
 	enif_iuc::AgentHome agent_home;
@@ -208,45 +215,53 @@ int main(int argc, char **argv)
 	switch(command_type){
 	case COMMAND_MPS:
 	  //form mps and publish
-	  cout<<"Receiving mps quad info ";
+	  //cout<<"Receiving mps quad info ";
+	  ROS_INFO_THROTTLE(1,"Receiving mps quad info from Agent %d", target_number);
+	  checksum_result = checksum(buf);
 	  get_mps(buf);
+	  buf = buf + 45;
 	  agent_mps.agent_number = target_number;
 	  agent_mps.mps = mps;
-	  checksum_result = checksum(buf);
-	  if(checksum_result && extract_GPS_from_MPS(mps))
+	  if(checksum_result && extract_GPS_from_MPS(mps)){
 	    mps_pub.publish(agent_mps);
+	  }
 	  if(NEW_MPS){
 	    mps = my_mps; gps = my_gps;
 	  }
-	  cout<<"from Agent."<<target_number<<endl;
+	  //cout<<"from Agent."<<target_number<<endl;
 	  break;
 	case COMMAND_HOME:
 	  //form home and publish
-	  cout<<"Receiving home quad info ";	  
+	  ROS_INFO_THROTTLE(1,"Receiving home quad info from Agent %d", target_number);
+	  //cout<<"Receiving home quad info ";
+	  checksum_result = checksum(buf);
 	  get_home(buf);
+	  buf += 24;
 	  agent_home.agent_number = target_number;
 	  agent_home.home = home;
-	  checksum_result = checksum(buf);
 	  if(checksum_result && checkHome(home))	    
 	    home_pub.publish(agent_home);
 	  if(NEW_HOME){
 	    home = my_home;
 	  }
-	  cout<<"from Agent."<<target_number<<endl;
+	  //cout<<"from Agent."<<target_number<<endl;
 	  break;
 	case COMMAND_LOCAL:
 	  //form local and publish
-	  cout<<"Receiving local quad info ";
+	  //cout<<"Receiving local quad info ";
+	  ROS_INFO_THROTTLE(1,"Receiving local quad info from Agent %d", target_number);
+	  checksum_result = checksum(buf);
 	  get_local(buf);
+	  buf += 60;
 	  agent_local.agent_number = target_number;
 	  agent_local.local = local;
-	  checksum_result = checksum(buf);
 	  if(checksum_result && checkLocal(local))
 	    local_pub.publish(agent_local);
 	  if(NEW_LOCAL){
 	    local = my_local;
 	  }
-	  cout<<"from Agent."<<target_number<<endl;
+	  
+	  //cout<<"from Agent."<<target_number<<endl;
 	  break;
 	default:
 	  break;
@@ -255,7 +270,6 @@ int main(int argc, char **argv)
     }else{
       // Get command type
       cout<<"Receiving command: ";
-      int command_type = get_command_type(buf);
       bool checksum_result = false;
       switch(command_type){
       case COMMAND_WAYPOINT:{
@@ -316,6 +330,7 @@ int main(int argc, char **argv)
 	  if(command_type == COMMAND_BOX)
 	    box_pub.publish(box);
 	}
+    }
     }
     // Send GPS mps state and battery data every 1 sec
     if(count%5 == 0)
