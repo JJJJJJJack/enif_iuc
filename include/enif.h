@@ -248,6 +248,31 @@ bool extract_GPS_from_MPS(mps_driver::MPS mps_read)
   return false;
 }
 
+
+bool checkHome(mavros_msgs::HomePosition myhome)
+{
+  /* bool checkValue(double var, double min, double max) */
+  if (checkValue(myhome.geo.latitude, -180, 180)  &&
+      checkValue(myhome.geo.longitude, -180, 180) &&
+      checkValue(myhome.geo.altitude, 0, 1500))
+    {
+      return true;
+    }
+  return false;
+}
+
+bool checkLocal(nav_msgs::Odometry mylocal)
+{
+  /* bool checkValue(double var, double min, double max) */
+  if (checkValue(mylocal.pose.pose.position.x, -100, 100)  &&
+      checkValue(mylocal.pose.pose.position.y, -100, 100) &&
+      checkValue(mylocal.pose.pose.position.z, -100, 100))
+    {
+      return true;
+    }
+  return false;
+}
+
 void get_mps(char* buf)
 {
   GAS_ID = CharToInt(buf[3]);

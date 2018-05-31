@@ -227,7 +227,7 @@ int main(int argc, char **argv)
 	  agent_home.agent_number = target_number;
 	  agent_home.home = home;
 	  checksum_result = checksum(buf);
-	  if(checksum_result)	    
+	  if(checksum_result && checkHome(home))	    
 	    home_pub.publish(agent_home);
 	  if(NEW_HOME){
 	    home = my_home;
@@ -241,7 +241,7 @@ int main(int argc, char **argv)
 	  agent_local.agent_number = target_number;
 	  agent_local.local = local;
 	  checksum_result = checksum(buf);
-	  if(checksum_result)
+	  if(checksum_result && checkLocal(local))
 	    local_pub.publish(agent_local);
 	  if(NEW_LOCAL){
 	    local = my_local;
