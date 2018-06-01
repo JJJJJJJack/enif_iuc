@@ -266,6 +266,8 @@ int main(int argc, char **argv)
 	default:
 	  break;
 	}
+	if(command_type==COMMAND_WAYPOINT || command_type==COMMAND_TAKEOFF || command_type==COMMAND_BOX)
+	  break;
       }
     }else{
       // Get command type
@@ -281,6 +283,7 @@ int main(int argc, char **argv)
 	get_waypoints(waypoint_number, buf, waypoint_list);
 	checksum_result = checksum(buf);
 	cout<<waypoint_list<<endl;
+	buf[get_waypointlist_buf_size(waypoint_number)+1] = 0x0A;
 	string send_data(buf);
 	USBPORT.write(send_data);
 	//if(checksum_result)
@@ -308,6 +311,7 @@ int main(int argc, char **argv)
 	else
 	  cout<< " Land"<<endl;
 	checksum_result = checksum(buf);
+	buf[4] = 0x0A;
 	string send_data(buf);
 	USBPORT.write(send_data);
 	//string send_data;

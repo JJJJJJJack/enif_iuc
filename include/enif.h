@@ -211,6 +211,14 @@ void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypo
     }
 }
 
+int get_waypointlist_buf_size(int waypoint_number)
+{
+  int buf_size = 0;
+  //20 bytes of wp info + 25 bytes per waypoint
+  buf_size = 20+25*waypoint_number;
+  return buf_size;
+}
+
 void get_box(char* buf, std_msgs::Float64MultiArray &box)
 {
   double latitude, longitude, width, height, angle;

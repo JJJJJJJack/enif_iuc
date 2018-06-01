@@ -301,6 +301,7 @@ int main(int argc, char **argv)
 	waypoint_checked[response_number] = check_waypoints(agent_wp[response_number].waypoint_list, waypoint_list);
 	cout<<"Waypoint check: "<<waypoint_checked[response_number]<<endl;
 	cout<<waypoint_list<<endl;
+	buf = buf+get_waypointlist_buf_size(waypoint_number)+1;
 	break;
       case COMMAND_BOX:
 	//only verifies response from the agent
