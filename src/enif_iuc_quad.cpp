@@ -189,7 +189,7 @@ int main(int argc, char **argv)
     strcpy(charbuf, data.c_str());
     char *buf = charbuf;
     int command_type = get_command_type(buf);
-    while(buf[0] != '\0' && (command_type == COMMAND_MPS || command_type == COMMAND_HOME || command_type == COMMAND_LOCAL)){
+    while(buf[0] != '\0' && (command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_BOX || command_type==COMMAND_TAKEOFF || command_type==COMMAND_WAYPOINT)){
       command_type = get_command_type(buf);
       //      cout<<strlen(buf)<<endl;
       //ROS_INFO_THROTTLE(1,"%d",strlen(buf));
@@ -330,10 +330,11 @@ int main(int argc, char **argv)
 	  if(command_type == COMMAND_BOX)
 	    box_pub.publish(box);
 	}
+      break;
     }
     }
     // Send GPS mps state and battery data every 1 sec
-    if(count%5 == 0)
+    if(count%2 == 0)
       {
 	char send_buf[256] = {'\0'};
 	switch(send_count){
