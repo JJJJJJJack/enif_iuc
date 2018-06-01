@@ -215,18 +215,22 @@ int main(int argc, char **argv)
 
   while (ros::ok())
   {
-    char buf[256] = {'\0'};
+    char charbuf[256] = {'\0'};
     string data = USBPORT.read(256+1);
-    strcpy(buf, data.c_str());
+    strcpy(charbuf, data.c_str());
+    char* buf = charbuf;
+    // Get command type
+    int command_type = get_command_type(buf);
+    while(buf[0]!='\0' && (command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_STATE)){
+      //cout<<strlen(buf)<<endl;
     // Get the target number first
     int target_number = get_target_number(buf);
+    command_type = get_command_type(buf);
     //cout<<"Target number: "<<target_number<<endl;
     if(target_number < 0){
       //Do nothing because GS need to subs to all other topics
       //cout<<"Error receiving data. Target number is negative: "<<target_number<<endl;
     }else{
-      // Get command type
-      int command_type = get_command_type(buf);
       enif_iuc::AgentGlobalPosition agent_gps;
       enif_iuc::AgentHeight agent_height;
       enif_iuc::AgentMPS agent_mps;
@@ -249,41 +253,43 @@ int main(int argc, char **argv)
 	break;
       case COMMAND_MPS:
 	//form mps and publish
+	checksum_result = checksum(buf);
 	get_mps(buf);
+	ROS_INFO_THROTTLE(0.1, "Quad No.%d MPS", target_number);
 	agent_mps.agent_number = target_number;
 	agent_mps.mps = mps;
-	checksum_result = checksum(buf);
-	if(checksum_result)
-	  if(mps.percentLEL != 0)
-	    mps_pub.publish(agent_mps);
-	  else{
-	    agent_gps.agent_number = target_number;
-	    if(extract_GPS_from_MPS(mps) == true){
-	      agent_gps.gps = gps;
-	      agent_height.agent_number = target_number;
-	      agent_height.height = height;
-	      height_pub.publish(agent_height);
-	      GPS_pub.publish(agent_gps);
-	    }
+	buf = buf+45;
+	if(mps.percentLEL != 0)
+	  mps_pub.publish(agent_mps);
+	else{
+	  agent_gps.agent_number = target_number;
+	  if(extract_GPS_from_MPS(mps) == true){
+	    agent_gps.gps = gps;
+	    agent_height.agent_number = target_number;
+	    agent_height.height = height;
+	    height_pub.publish(agent_height);
+	    GPS_pub.publish(agent_gps);
 	  }
+	}
 	break;
       case COMMAND_STATE:
 	//form state and publish
+	checksum_result = checksum(buf);
 	get_state(buf);
 	agent_state.agent_number = target_number;
 	agent_state.state = state;
-	checksum_result = checksum(buf);
-	if(checksum_result)
-	  state_pub.publish(agent_state);
+	ROS_INFO_THROTTLE(0.1, "Quad No.%d state", target_number);
+	buf = buf+5;
+	state_pub.publish(agent_state);
 	break;
       case COMMAND_BATTERY:
 	//form battery state and publish
+	checksum_result = checksum(buf);
 	get_battery(buf);
 	agent_battery.agent_number = target_number;
 	agent_battery.battery = battery;
-	checksum_result = checksum(buf);
-	if(checksum_result)
-	  battery_pub.publish(agent_battery);
+	buf = buf+8;
+	battery_pub.publish(agent_battery);
 	break;
       case COMMAND_WAYPOINT:
 	//response from the agent
@@ -304,6 +310,7 @@ int main(int argc, char **argv)
 	box_checked[response_number] = check_box(agent_box[response_number].box, box);
 	cout<<"Box check: "<<box_checked[response_number]<<endl;
 	cout<<box<<endl;
+	buf = buf+48;
 	break;
       case COMMAND_TAKEOFF:
 	//only verifies response from the agent
@@ -312,10 +319,18 @@ int main(int argc, char **argv)
 	takeoff_checked[response_number] = check_takeoff(agent_takeoff[response_number].takeoff_command, takeoff_command);
 	cout<<"Takeoff check: "<<takeoff_checked[response_number]<<endl;
 	cout<<takeoff_command<<endl;
+	buf = buf+5;
+	break;
+      case COMMAND_LOCAL:
+	buf = buf+60;
+	break;
+      case COMMAND_HOME:
+	buf = buf+24;
 	break;
       default:
 	break;
       }
+    }
     }
     if(count%3 == 0)
       {

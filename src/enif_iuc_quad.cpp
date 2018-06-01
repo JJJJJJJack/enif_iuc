@@ -222,7 +222,7 @@ int main(int argc, char **argv)
 	  buf = buf + 45;
 	  agent_mps.agent_number = target_number;
 	  agent_mps.mps = mps;
-	  if(checksum_result && extract_GPS_from_MPS(mps)){
+	  if(extract_GPS_from_MPS(mps)){
 	    mps_pub.publish(agent_mps);
 	  }
 	  if(NEW_MPS){
@@ -239,7 +239,7 @@ int main(int argc, char **argv)
 	  buf += 24;
 	  agent_home.agent_number = target_number;
 	  agent_home.home = home;
-	  if(checksum_result && checkHome(home))	    
+	  if(checkHome(home))	    
 	    home_pub.publish(agent_home);
 	  if(NEW_HOME){
 	    home = my_home;
@@ -255,7 +255,7 @@ int main(int argc, char **argv)
 	  buf += 60;
 	  agent_local.agent_number = target_number;
 	  agent_local.local = local;
-	  if(checksum_result && checkLocal(local))
+	  if(checkLocal(local))
 	    local_pub.publish(agent_local);
 	  if(NEW_LOCAL){
 	    local = my_local;
