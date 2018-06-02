@@ -3,7 +3,7 @@
 <launch>
 
   <node name="enif_iuc_quad" pkg="enif_iuc" type="enif_iuc_quad" respawn="true" launch-prefix="" output="screen">
-    <param name="AGENT_NUMBER" type="int" value="2"/>
+    <param name="AGENT_NUMBER" type="int" value="1"/>
     <param name="USB" type="string" value="/dev/ttyUSB0"/>
   </node>
 </launch>

@@ -189,10 +189,11 @@ int main(int argc, char **argv)
     strcpy(charbuf, data.c_str());
     char *buf = charbuf;
     int command_type = get_command_type(buf);
+    int c = 0;
     while(buf[0] != '\0' && (command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_BOX || command_type==COMMAND_TAKEOFF || command_type==COMMAND_WAYPOINT)){
       command_type = get_command_type(buf);
       //      cout<<strlen(buf)<<endl;
-      //ROS_INFO_THROTTLE(1,"%d",strlen(buf));
+      //RnnnnnnOS_INFO_THROTTLE(1,"%d",strlen(buf));
       //printf("%x\n", buf[0]);
     // Get the target number first
     int target_number = get_target_number(buf);
@@ -326,7 +327,7 @@ int main(int argc, char **argv)
       default:
 	break;
       }
-      if(checksum_result)
+      //if(checksum_result)
 	{
 	  if(command_type == COMMAND_WAYPOINT)
 	    wp_pub.publish(waypoint_list);
@@ -336,6 +337,11 @@ int main(int argc, char **argv)
 	}
       break;
     }
+    c++;
+    if (c>50)
+      {
+	break;
+      }
     }
     // Send GPS mps state and battery data every 1 sec
     if(count%2 == 0)

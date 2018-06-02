@@ -221,7 +221,8 @@ int main(int argc, char **argv)
     char* buf = charbuf;
     // Get command type
     int command_type = get_command_type(buf);
-    while(buf[0]!='\0' && (command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_STATE)){
+    int c=0;
+    while(buf[0]!='\0' && (command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_STATE || command_type==COMMAND_WAYPOINT || command_type==COMMAND_BOX)){
       //cout<<strlen(buf)<<endl;
     // Get the target number first
     int target_number = get_target_number(buf);
@@ -332,6 +333,8 @@ int main(int argc, char **argv)
 	break;
       }
     }
+    if(c++>50)
+      break;
     }
     if(count%3 == 0)
       {
