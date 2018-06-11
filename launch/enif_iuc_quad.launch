@@ -5,5 +5,8 @@
   <node name="enif_iuc_quad" pkg="enif_iuc" type="enif_iuc_quad" respawn="true" launch-prefix="" output="screen">
     <param name="AGENT_NUMBER" type="int" value="1"/>
     <param name="USB" type="string" value="/dev/ttyUSB0"/>
+    <param name="sendLocal" type="bool" value="false"/>
+    <param name="sendBat" type="bool" value="true"/>
+    <param name="sendHome" type="bool" value="true"/>
   </node>
 </launch>

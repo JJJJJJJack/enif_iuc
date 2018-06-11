@@ -33,6 +33,7 @@
 #include "enif_iuc/WaypointTask.h"
 #include "mps_driver/MPS.h"
 #include <string>
+#include <geographic_msgs/GeoPoint.h>
 
 using namespace std;
 
@@ -45,10 +46,16 @@ using namespace std;
 #define COMMAND_BOX      7
 #define COMMAND_HOME     8
 #define COMMAND_LOCAL    9
+#define COMMAND_AVEHOME  10
 
 #define GAS_NONE    0
 #define GAS_PROPANE 1
 #define GAS_METHANE 2
+
+// transmit local and home info from quad
+bool sendLocal = false;
+bool sendBat   = false;
+bool sendHome  = true;
 
 std::string USB;
 int AGENT_NUMBER = 0;
@@ -64,9 +71,15 @@ sensor_msgs::BatteryState battery;
 mavros_msgs::HomePosition home;
 nav_msgs::Odometry local;
 
+//containers for enif_iuc_ground
+std::vector<geographic_msgs::GeoPoint> agentHomes;
+std::vector<int> agentID;
+geographic_msgs::GeoPoint averageHome;
+
 std_msgs::Bool takeoff_command;
 enif_iuc::WaypointTask waypoint_list;
 std_msgs::Float64MultiArray box;
+
 
 int CharToInt(char a)
 {
@@ -336,6 +349,8 @@ void get_local(char* buf)
   buf = buf + 59;
 }
 
+
+
 void get_home(char* buf)
 {
   double latitude, longitude;
@@ -349,6 +364,26 @@ void get_home(char* buf)
   home.geo.longitude = longitude;  
   home.geo.altitude = altitude;
   buf = buf + 23;
+}
+
+void getAvehome(void){
+  // std::cout<<"get ave home"<<std::endl;
+  // get average home location
+
+  double aveLong=0.0;
+  double aveLat=0.0;
+  double aveAlt=0.0;  
+  for (int i=0; i<agentHomes.size(); i++){
+    // std::cout<<"agentHome: "<<agentHomes[i]<<std::endl;    
+    aveLong = aveLong + agentHomes[i].longitude;
+    aveLat = aveLat + agentHomes[i].latitude;
+    aveAlt = aveAlt + agentHomes[i].altitude;
+  }
+  
+  averageHome.longitude = aveLong/agentHomes.size();
+  averageHome.latitude = aveLat/agentHomes.size();
+  averageHome.altitude = aveAlt/agentHomes.size();
+
 }
 
 void clearmps()

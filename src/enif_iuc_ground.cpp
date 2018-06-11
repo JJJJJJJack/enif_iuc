@@ -13,6 +13,7 @@ bool NEW_TAKEOFF = false, NEW_WP = false, NEW_BOX = false;
 enif_iuc::AgentTakeoff agent_takeoff[256];
 enif_iuc::AgentWaypointTask agent_wp[256];
 enif_iuc::AgentBox agent_box[256];
+int recHome = 0;
 int agent_number_wp = 0, agent_number_box = 0, agent_number_takeoff = 0;
 bool waypoint_checked[256] = {true, true, true, true, true};
 bool box_checked[256] = {true, true, true, true, true};
@@ -137,6 +138,18 @@ void form_takeoff(char* buf, int agent_number, std_msgs::Bool takeoff)
   buf[4] = 0x0A;
 }
 
+void form_home(char* buf, int agent_number, geographic_msgs::GeoPoint aveHome)
+{
+  // different than enif_iuc_quad
+  buf[1] = IntToChar(agent_number);
+  buf[2] = IntToChar(COMMAND_AVEHOME);
+  DoubleToChar(buf+3, aveHome.latitude);
+  DoubleToChar(buf+11, aveHome.longitude);
+  FloatToChar(buf+19, aveHome.altitude);
+  buf[19+4] = 0x0A;
+}
+
+
 void form_waypoint_info(char* buf, int agent_number, int waypoint_number, enif_iuc::WaypointTask &waypoint_list)
 {
   buf[1] = IntToChar(agent_number);
@@ -237,6 +250,7 @@ int main(int argc, char **argv)
       enif_iuc::AgentMPS agent_mps;
       enif_iuc::AgentState agent_state;
       enif_iuc::AgentBatteryState agent_battery;
+      
       bool checksum_result = false;
       switch(command_type){
       case COMMAND_GPS:
@@ -327,6 +341,24 @@ int main(int argc, char **argv)
 	buf = buf+60;
 	break;
       case COMMAND_HOME:
+	response_number = get_target_number(buf);	
+	get_home(buf);
+	if (checkHome(home)){	 	  
+	  std::vector<int>::iterator it;
+	  it = std::find(agentID.begin(), agentID.end(), response_number);
+	  if (it != agentID.end()){ // if i already have gps    
+	    // overwrite it
+	    int i = it - agentID.begin();
+	    agentHomes[i] = home.geo;
+	  }
+	  else{
+	    // push new home back        	
+	    agentHomes.push_back(home.geo);
+	    agentID.push_back(response_number);
+	  }
+	  cout<<"Recieved agent "<< response_number<<"'s home: "<<home.geo.latitude<<", "<<home.geo.longitude<<", "<<home.geo.altitude<<endl;
+	  recHome += 1;
+	}
 	buf = buf+24;
 	break;
       default:
@@ -374,10 +406,23 @@ int main(int argc, char **argv)
 	      cout<<"send waypoint to agent "<<agent_number_wp<<endl;
 	    }
 	  break;
+	case 2:
+	  //send ave home location to all agents
+	  if (recHome>4 && agentHomes.size()!= 0){
+	    //cout<<"num of agent homes: "<<agentHomes.size()<<endl;
+	    getAvehome();
+	    form_home(send_buf, 100, averageHome); // sending as agent_number: 100 to recieve on quad side
+	    form_checksum(send_buf);
+	    string send_data(send_buf);
+	    USBPORT.write(send_data);
+	    cout<<"send ave home to all agents"<<endl;
+	    // ros::Duration(0.5).sleep();
+	  }		  
+	  break;	  
 	default:
 	  break;
 	}
-	if(send_count < 1) send_count++;
+	if(send_count < 2) send_count++;
 	else send_count = 0;
       }
     ros::spinOnce();
@@ -385,7 +430,6 @@ int main(int argc, char **argv)
     loop_rate.sleep();
     ++count;
   }
-
 
   return 0;
 }

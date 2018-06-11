@@ -163,6 +163,13 @@ int main(int argc, char **argv)
   n.getParam("/enif_iuc_quad/AGENT_NUMBER", AGENT_NUMBER);
   cout<<"This is Agent No."<<AGENT_NUMBER<<endl;
   
+  n.getParam("/enif_iuc_quad/sendLocal", sendLocal);
+  n.getParam("/enif_iuc_quad/sendHome", sendHome);
+  n.getParam("/enif_iuc_quad/sendBat", sendBat);
+  cout<<"sendLocal: "<<sendLocal<<endl;
+  cout<<"sendHome: "<<sendHome<<endl;
+  cout<<"sendBat: "<<sendBat<<endl;
+  
   ros::Rate loop_rate(100);
 
   struct timeval tvstart, tvend, timeout;
@@ -190,7 +197,7 @@ int main(int argc, char **argv)
     char *buf = charbuf;
     int command_type = get_command_type(buf);
     int c = 0;
-    while(buf[0] != '\0' && (command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_BOX || command_type==COMMAND_TAKEOFF || command_type==COMMAND_WAYPOINT)){
+    while(buf[0] != '\0' && (command_type==COMMAND_MPS || command_type==COMMAND_AVEHOME || command_type==COMMAND_LOCAL || command_type==COMMAND_BOX || command_type==COMMAND_TAKEOFF || command_type==COMMAND_WAYPOINT)){
       command_type = get_command_type(buf);
       //      cout<<strlen(buf)<<endl;
       //RnnnnnnOS_INFO_THROTTLE(1,"%d",strlen(buf));
@@ -231,20 +238,22 @@ int main(int argc, char **argv)
 	  }
 	  //cout<<"from Agent."<<target_number<<endl;
 	  break;
-	case COMMAND_HOME:
-	  //form home and publish
-	  ROS_INFO_THROTTLE(1,"Receiving home quad info from Agent %d", target_number);
+	case COMMAND_AVEHOME:
+	  //form home and publish, 
+	  ROS_INFO_THROTTLE(1,"Receiving ave home info");
 	  //cout<<"Receiving home quad info ";
 	  checksum_result = checksum(buf);
 	  get_home(buf);
 	  buf += 24;
 	  agent_home.agent_number = target_number;
 	  agent_home.home = home;
-	  if(checkHome(home))	    
+	  if(checkHome(home))
 	    home_pub.publish(agent_home);
-	  if(NEW_HOME){
-	    home = my_home;
-	  }
+	  
+	  // if(NEW_HOME){
+	  //   home = my_home;
+	  // }
+	  
 	  //cout<<"from Agent."<<target_number<<endl;
 	  break;
 	case COMMAND_LOCAL:
@@ -367,7 +376,7 @@ int main(int argc, char **argv)
 	  }
 	  break;
 	case 2:
-	  if(NEW_HOME){
+	  if(NEW_HOME && sendHome){
 	    form_home(send_buf);
 	    form_checksum(send_buf);
 	    string send_data(send_buf);
@@ -376,7 +385,7 @@ int main(int argc, char **argv)
 	  }
 	  break;
 	case 3:
-	  if(NEW_LOCAL){
+	  if(NEW_LOCAL && sendLocal){
 	    form_local(send_buf);
 	    form_checksum(send_buf);
 	    string send_data(send_buf);
@@ -384,9 +393,8 @@ int main(int argc, char **argv)
 	    NEW_LOCAL = false;
 	  }
 	  break;
-	  /*
-	case 2:
-	  if(NEW_BATTERY){
+	case 4:
+	  if(NEW_BATTERY && sendBat){
 	    form_battery(send_buf);
 	    form_checksum(send_buf);
 	    string send_data(send_buf);
@@ -394,11 +402,10 @@ int main(int argc, char **argv)
 	    NEW_BATTERY = false;
 	  }
 	  break;
-	  */
 	default:
 	  break;
 	}
-	if(send_count < 4) send_count++;
+	if(send_count <= 4) send_count++;
 	else send_count = 0;
       }
     
