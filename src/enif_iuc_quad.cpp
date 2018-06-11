@@ -101,7 +101,7 @@ void form_home(char* buf)
   buf[2] = IntToChar(COMMAND_HOME);
   DoubleToChar(buf+3, home.geo.latitude);
   DoubleToChar(buf+11, home.geo.longitude);
-  DoubleToChar(buf+19, home.geo.longitude);
+  DoubleToChar(buf+19, home.geo.altitude);
   buf[19+8] = 0x0A;
 }
 

@@ -353,17 +353,16 @@ void get_local(char* buf)
 
 void get_home(char* buf)
 {
-  double latitude, longitude;
-  float altitude;
+  double latitude, longitude, altitude;
   
   CharToDouble(buf+3, latitude);
   CharToDouble(buf+11, longitude);
-  CharToFloat(buf+19, altitude);
+  CharToDouble(buf+19, altitude);
   
   home.geo.latitude = latitude;
   home.geo.longitude = longitude;  
   home.geo.altitude = altitude;
-  buf = buf + 23;
+  buf = buf + 28;
 }
 
 void getAvehome(void){
