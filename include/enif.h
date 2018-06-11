@@ -6,11 +6,13 @@
 #include <cstdlib>
 #include <iostream>
 #include <cmath>
+#include <math.h>
 #include <time.h>
 #include <ctime>
 #include <unistd.h>
 #include <typeinfo>
 #include <vector>
+#include <algorithm>
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
@@ -277,7 +279,9 @@ bool checkHome(mavros_msgs::HomePosition myhome)
   /* bool checkValue(double var, double min, double max) */
   if (checkValue(myhome.geo.latitude, -180, 180)  &&
       checkValue(myhome.geo.longitude, -180, 180) &&
-      checkValue(myhome.geo.altitude, 0, 1500))
+      checkValue(myhome.geo.altitude, 0, 1500) &&
+      (fabs(myhome.geo.latitude) + fabs(myhome.geo.longitude) + fabs(myhome.geo.altitude)) > 1 &&
+      (fabs(myhome.geo.latitude) + fabs(myhome.geo.longitude) + fabs(myhome.geo.altitude)) < 1000000)
     {
       return true;
     }
@@ -371,12 +375,15 @@ void getAvehome(void){
 
   double aveLong=0.0;
   double aveLat=0.0;
-  double aveAlt=0.0;  
-  for (int i=0; i<agentHomes.size(); i++){
-    // std::cout<<"agentHome: "<<agentHomes[i]<<std::endl;    
+  double aveAlt=0.0;
+  
+  for (int i=0; i<agentHomes.size(); i++){    
+    // std::cout<<"agentHome: "<<agentHomes[i]<<std::endl;
     aveLong = aveLong + agentHomes[i].longitude;
     aveLat = aveLat + agentHomes[i].latitude;
     aveAlt = aveAlt + agentHomes[i].altitude;
+    //ROS_INFO("i: %d, lat: %f, long: %f, alt: %f", agentHomes[i].latitude, agentHomes[i].longitude, agentHomes[i].altitude);
+    
   }
   
   averageHome.longitude = aveLong/agentHomes.size();

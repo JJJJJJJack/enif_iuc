@@ -343,7 +343,7 @@ int main(int argc, char **argv)
       case COMMAND_HOME:
 	response_number = get_target_number(buf);	
 	get_home(buf);
-	if (checkHome(home)){	 	  
+	if (checkHome(home)){
 	  std::vector<int>::iterator it;
 	  it = std::find(agentID.begin(), agentID.end(), response_number);
 	  if (it != agentID.end()){ // if i already have gps    
@@ -355,8 +355,8 @@ int main(int argc, char **argv)
 	    // push new home back        	
 	    agentHomes.push_back(home.geo);
 	    agentID.push_back(response_number);
-	  }
-	  cout<<"Recieved agent "<< response_number<<"'s home: "<<home.geo.latitude<<", "<<home.geo.longitude<<", "<<home.geo.altitude<<", "<<checksum(buf)<<endl;
+	  }	  
+	  //cout<<"Recieved agent "<< response_number<<"'s home: "<<agentHomes[response_number].latitude<<", "<<agentHomes[response_number].longitude<<", "<<agentHomes[response_number].altitude<<", "<<checksum(buf)<<", "<<agentHomes.size()<<endl;
 	  recHome += 1;
 	}
 	buf = buf+28;
@@ -408,15 +408,16 @@ int main(int argc, char **argv)
 	  break;
 	case 2:
 	  //send ave home location to all agents
-	  if (recHome>4 && agentHomes.size()!= 0){
+	  if (recHome>5 && agentHomes.size()!= 0){
 	    //cout<<"num of agent homes: "<<agentHomes.size()<<endl;
-	    getAvehome();
+	    getAvehome();	    
+	    cout<<"sending averageHome: "<<averageHome.latitude<<", "<<averageHome.longitude<<", "<<averageHome.altitude<<endl;
 	    form_home(send_buf, 100, averageHome); // sending as agent_number: 100 to recieve on quad side
 	    form_checksum(send_buf);
 	    string send_data(send_buf);
 	    USBPORT.write(send_data);
-	    //cout<<"send ave home to all agents"<<endl;
-	    // ros::Duration(0.5).sleep();
+	    recHome = 0;
+
 	  }		  
 	  break;	  
 	default:
