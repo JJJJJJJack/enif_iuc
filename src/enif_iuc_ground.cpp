@@ -145,8 +145,8 @@ void form_home(char* buf, int agent_number, geographic_msgs::GeoPoint aveHome)
   buf[2] = IntToChar(COMMAND_AVEHOME);
   DoubleToChar(buf+3, aveHome.latitude);
   DoubleToChar(buf+11, aveHome.longitude);
-  FloatToChar(buf+19, aveHome.altitude);
-  buf[19+4] = 0x0A;
+  DoubleToChar(buf+19, aveHome.altitude);  
+  buf[19+8] = 0x0A;  
 }
 
 
@@ -356,10 +356,10 @@ int main(int argc, char **argv)
 	    agentHomes.push_back(home.geo);
 	    agentID.push_back(response_number);
 	  }
-	  cout<<"Recieved agent "<< response_number<<"'s home: "<<home.geo.latitude<<", "<<home.geo.longitude<<", "<<home.geo.altitude<<endl;
+	  cout<<"Recieved agent "<< response_number<<"'s home: "<<home.geo.latitude<<", "<<home.geo.longitude<<", "<<home.geo.altitude<<", "<<checksum(buf)<<endl;
 	  recHome += 1;
 	}
-	buf = buf+24;
+	buf = buf+28;
 	break;
       default:
 	break;
@@ -415,7 +415,7 @@ int main(int argc, char **argv)
 	    form_checksum(send_buf);
 	    string send_data(send_buf);
 	    USBPORT.write(send_data);
-	    cout<<"send ave home to all agents"<<endl;
+	    //cout<<"send ave home to all agents"<<endl;
 	    // ros::Duration(0.5).sleep();
 	  }		  
 	  break;	  

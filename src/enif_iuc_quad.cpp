@@ -101,8 +101,8 @@ void form_home(char* buf)
   buf[2] = IntToChar(COMMAND_HOME);
   DoubleToChar(buf+3, home.geo.latitude);
   DoubleToChar(buf+11, home.geo.longitude);
-  FloatToChar(buf+19, home.geo.altitude);
-  buf[19+4] = 0x0A;
+  DoubleToChar(buf+19, home.geo.longitude);
+  buf[19+8] = 0x0A;
 }
 
 
@@ -244,7 +244,7 @@ int main(int argc, char **argv)
 	  //cout<<"Receiving home quad info ";
 	  checksum_result = checksum(buf);
 	  get_home(buf);
-	  buf += 24;
+	  buf += 28;
 	  agent_home.agent_number = target_number;
 	  agent_home.home = home;
 	  if(checkHome(home))
