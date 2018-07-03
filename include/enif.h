@@ -244,7 +244,7 @@ void get_box(char* buf, std_msgs::Float64MultiArray &box)
   CharToDouble(buf+27, height);
   CharToDouble(buf+35, angle);
   staytime  = CharToInt(buf[43]);
-  wp_height = CharToInt(buf[44]);
+  wp_height = CharToInt(buf[44])/20.0;
   velocity  = CharToInt(buf[45]);
   wp_radius = CharToInt(buf[46]);
   box.data.push_back(longitude);

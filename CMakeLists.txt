@@ -33,6 +33,7 @@ add_message_files(
   AgentBatteryState.msg
   AgentHome.msg
   AgentLocal.msg
+  AgentWaypointCheck.msg
 #   Message2.msg
 )
 

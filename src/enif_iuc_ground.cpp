@@ -8,11 +8,13 @@
 #include "enif_iuc/AgentHeight.h"
 #include "enif_iuc/AgentBatteryState.h"
 #include "enif_iuc/AgentBox.h"
+#include "enif_iuc/AgentWaypointCheck.h"
 
 bool NEW_TAKEOFF = false, NEW_WP = false, NEW_BOX = false;
 enif_iuc::AgentTakeoff agent_takeoff[256];
 enif_iuc::AgentWaypointTask agent_wp[256];
 enif_iuc::AgentBox agent_box[256];
+enif_iuc::AgentWaypointCheck wpcheck_msg;
 int recHome = 0;
 int agent_number_wp = 0, agent_number_box = 0, agent_number_takeoff = 0;
 bool waypoint_checked[256] = {true, true, true, true, true};
@@ -186,7 +188,7 @@ void form_box(char* buf, int agent_number, std_msgs::Float64MultiArray &box)
   DoubleToChar(buf+27, box.data[3]);
   DoubleToChar(buf+35, box.data[4]);
   buf[43] = IntToChar((int)box.data[5]);
-  buf[44] = IntToChar((int)box.data[6]);
+  buf[44] = IntToChar((int)(box.data[6]*20.0));
   buf[45] = IntToChar((int)box.data[7]);
   buf[46] = IntToChar((int)box.data[8]);
   buf[47] = 0x0A;
@@ -202,6 +204,7 @@ int main(int argc, char **argv)
   ros::Publisher  GPS_pub      = n.advertise<enif_iuc::AgentGlobalPosition>("global_position", 1);
   ros::Publisher  height_pub   = n.advertise<enif_iuc::AgentHeight>("ext_height", 1);
   ros::Publisher  battery_pub  = n.advertise<enif_iuc::AgentBatteryState>("battery", 1);
+  ros::Publisher  wpcheck_pub  = n.advertise<enif_iuc::AgentWaypointCheck>("waypoint_check", 1);
   ros::Subscriber sub_takeoff  = n.subscribe("takeoff_command",5,takeoff_callback);
   ros::Subscriber sub_wp       = n.subscribe("waypoint_list",5,wp_callback);
   ros::Subscriber sub_box      = n.subscribe("rotated_box",1,box_callback);
@@ -315,6 +318,9 @@ int main(int argc, char **argv)
 	get_waypoints(waypoint_number, buf, waypoint_list);
 	waypoint_checked[response_number] = check_waypoints(agent_wp[response_number].waypoint_list, waypoint_list);
 	cout<<"Waypoint check: "<<waypoint_checked[response_number]<<endl;
+    wpcheck_msg.agent_number = response_number;
+	wpcheck_msg.check.data = waypoint_checked[response_number];
+	wpcheck_pub.publish(wpcheck_msg);
 	cout<<waypoint_list<<endl;
 	buf = buf+get_waypointlist_buf_size(waypoint_number)+1;
 	break;
