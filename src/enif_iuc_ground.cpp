@@ -15,6 +15,7 @@ enif_iuc::AgentTakeoff agent_takeoff[256];
 enif_iuc::AgentWaypointTask agent_wp[256];
 enif_iuc::AgentBox agent_box[256];
 enif_iuc::AgentWaypointCheck wpcheck_msg;
+enif_iuc::AgentWaypointCheck boxcheck_msg;
 int recHome = 0;
 int agent_number_wp = 0, agent_number_box = 0, agent_number_takeoff = 0;
 bool waypoint_checked[256] = {true, true, true, true, true};
@@ -57,6 +58,34 @@ bool check_waypoints(enif_iuc::WaypointTask sendwp, enif_iuc::WaypointTask respo
 	}
   return true;
 }
+
+bool check_return_waypoints(enif_iuc::WaypointTask sendwp, enif_iuc::WaypointTask responsewp)
+{
+  bool result = false;
+
+  if (sendwp.velocity != responsewp.velocity || sendwp.damping_distance != responsewp.damping_distance)
+    return false;
+  else
+    if(sendwp.mission_waypoint.size() != responsewp.mission_waypoint.size())
+      return false;
+    else
+      for(int i = 0; i < sendwp.mission_waypoint.size(); i++)
+	{
+	  if(fabs(sendwp.mission_waypoint[i].latitude - responsewp.mission_waypoint[i].latitude)>1e-04)
+	    return false;
+	  else
+	    if(fabs(sendwp.mission_waypoint[i].longitude - responsewp.mission_waypoint[i].longitude)>1e-04)
+	      return false;
+	    else
+	      if(fabs(sendwp.mission_waypoint[i].target_height - responsewp.mission_waypoint[i].target_height)>1e-04)
+		return false;
+	      else
+		if(fabs(sendwp.mission_waypoint[i].staytime - responsewp.mission_waypoint[i].staytime)>1e-04)
+		  return false;
+	}
+  return true;
+}
+
 
 bool check_box(std_msgs::Float64MultiArray sendbox, std_msgs::Float64MultiArray responsebox)
 {
@@ -205,6 +234,7 @@ int main(int argc, char **argv)
   ros::Publisher  height_pub   = n.advertise<enif_iuc::AgentHeight>("ext_height", 1);
   ros::Publisher  battery_pub  = n.advertise<enif_iuc::AgentBatteryState>("battery", 1);
   ros::Publisher  wpcheck_pub  = n.advertise<enif_iuc::AgentWaypointCheck>("waypoint_check", 1);
+  ros::Publisher  boxcheck_pub = n.advertise<enif_iuc::AgentWaypointCheck>("rotated_box_check", 1);
   ros::Subscriber sub_takeoff  = n.subscribe("takeoff_command",5,takeoff_callback);
   ros::Subscriber sub_wp       = n.subscribe("waypoint_list",5,wp_callback);
   ros::Subscriber sub_box      = n.subscribe("rotated_box",1,box_callback);
@@ -277,9 +307,17 @@ int main(int argc, char **argv)
 	agent_mps.agent_number = target_number;
 	agent_mps.mps = mps;
 	buf = buf+45;
-	if(mps.percentLEL != 0)
+	if(mps.percentLEL != 0){
 	  mps_pub.publish(agent_mps);
-	else{
+	  agent_gps.agent_number = target_number;
+	  if(extract_GPS_from_MPS(mps) == true){
+	    agent_gps.gps = gps;
+	    agent_height.agent_number = target_number;
+	    agent_height.height = height;
+	    height_pub.publish(agent_height);
+	    GPS_pub.publish(agent_gps);
+	  }
+	}else{
 	  agent_gps.agent_number = target_number;
 	  if(extract_GPS_from_MPS(mps) == true){
 	    agent_gps.gps = gps;
@@ -316,7 +354,7 @@ int main(int argc, char **argv)
 	waypoint_number = get_waypoint_number(buf);
 	get_waypoint_info(buf, waypoint_list);
 	get_waypoints(waypoint_number, buf, waypoint_list);
-	waypoint_checked[response_number] = check_waypoints(agent_wp[response_number].waypoint_list, waypoint_list);
+	waypoint_checked[response_number] = check_return_waypoints(agent_wp[response_number].waypoint_list, waypoint_list);
 	cout<<"Waypoint check: "<<waypoint_checked[response_number]<<endl;
     wpcheck_msg.agent_number = response_number;
 	wpcheck_msg.check.data = waypoint_checked[response_number];
@@ -331,6 +369,8 @@ int main(int argc, char **argv)
 	get_box(buf, box);
 	box_checked[response_number] = check_box(agent_box[response_number].box, box);
 	cout<<"Box check: "<<box_checked[response_number]<<endl;
+	boxcheck_msg.check.data = box_checked[response_number];
+	boxcheck_pub.publish(boxcheck_msg);
 	cout<<box<<endl;
 	buf = buf+48;
 	break;
@@ -384,7 +424,7 @@ int main(int argc, char **argv)
 	      form_takeoff(send_buf, agent_takeoff[agent_number_takeoff].agent_number, agent_takeoff[agent_number_takeoff].takeoff_command);
 	      form_checksum(send_buf);
 	      NEW_TAKEOFF = false;
-	      string send_data(send_buf);
+	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
 	      USBPORT.write(send_data);
 	      cout<<"Send takeoff command to agent "<<agent_number_takeoff<<endl;
 	    }
@@ -396,7 +436,8 @@ int main(int argc, char **argv)
 	      form_box(send_buf, agent_box[agent_number_box].agent_number, agent_box[agent_number_box].box);
 	      form_checksum(send_buf);
 	      NEW_BOX = false;
-	      string send_data(send_buf);
+	      //string send_data(send_buf);
+	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
 	      USBPORT.write(send_data);
 	      cout<<"send box to agent "<<agent_number_box<<endl;
 	      cout<<agent_box[agent_number_box].box<<endl;
@@ -407,7 +448,7 @@ int main(int argc, char **argv)
 	      form_waypoints(send_buf, agent_wp[agent_number_wp].waypoint_list.mission_waypoint.size(), agent_wp[agent_number_wp].waypoint_list);
 	      form_checksum(send_buf);
 	      NEW_WP = false;
-	      string send_data(send_buf);
+	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
 	      USBPORT.write(send_data);
 	      cout<<"send waypoint to agent "<<agent_number_wp<<endl;
 	    }
@@ -420,7 +461,7 @@ int main(int argc, char **argv)
 	    cout<<"sending averageHome: "<<averageHome.latitude<<", "<<averageHome.longitude<<", "<<averageHome.altitude<<endl;
 	    form_home(send_buf, 100, averageHome); // sending as agent_number: 100 to recieve on quad side
 	    form_checksum(send_buf);
-	    string send_data(send_buf);
+	    std::vector<uint8_t> send_data(send_buf, send_buf+256);
 	    USBPORT.write(send_data);
 	    recHome = 0;
 

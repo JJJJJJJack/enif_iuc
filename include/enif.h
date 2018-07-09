@@ -98,6 +98,10 @@ void DoubleToChar(char* buf, double number)
   unsigned char *chptr;
   chptr = (unsigned char *) &number;
   for(int i = 0; i<sizeof(double); i++){
+    if(*chptr == 0xd0)
+      *chptr = 0xd1;
+    if(*chptr == 0xda)
+      *chptr = 0xdb;
     buf[i] = *chptr + '0';
     chptr++;
   }
