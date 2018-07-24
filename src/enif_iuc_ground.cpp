@@ -99,6 +99,18 @@ bool check_box(std_msgs::Float64MultiArray sendbox, std_msgs::Float64MultiArray 
   return true;
 }
 
+bool check_return_box(std_msgs::Float64MultiArray sendbox, std_msgs::Float64MultiArray responsebox)
+{
+  bool result = false;
+  if(sendbox.data.size() != responsebox.data.size())
+    return false;
+  for(int i = 0; i < 7; i++){
+    if(fabs(sendbox.data[i] - responsebox.data[i]) > 1e-04)
+      return false;
+  }
+  return true;
+}
+
 void takeoff_callback(const enif_iuc::AgentTakeoff &new_message)
 {
   agent_number_takeoff = new_message.agent_number;
@@ -308,7 +320,8 @@ int main(int argc, char **argv)
 	agent_mps.mps = mps;
 	buf = buf+45;
 	if(mps.percentLEL != 0){
-	  mps_pub.publish(agent_mps);
+	  if(agent_mps.mps.percentLEL > 0 && agent_mps.mps.percentLEL < 100)
+	    mps_pub.publish(agent_mps);
 	  agent_gps.agent_number = target_number;
 	  if(extract_GPS_from_MPS(mps) == true){
 	    agent_gps.gps = gps;
@@ -356,7 +369,7 @@ int main(int argc, char **argv)
 	get_waypoints(waypoint_number, buf, waypoint_list);
 	waypoint_checked[response_number] = check_return_waypoints(agent_wp[response_number].waypoint_list, waypoint_list);
 	cout<<"Waypoint check: "<<waypoint_checked[response_number]<<endl;
-    wpcheck_msg.agent_number = response_number;
+	wpcheck_msg.agent_number = response_number;
 	wpcheck_msg.check.data = waypoint_checked[response_number];
 	wpcheck_pub.publish(wpcheck_msg);
 	cout<<waypoint_list<<endl;
@@ -367,8 +380,9 @@ int main(int argc, char **argv)
 	response_number = get_target_number(buf);
 	box.data.clear();
 	get_box(buf, box);
-	box_checked[response_number] = check_box(agent_box[response_number].box, box);
+	box_checked[response_number] = check_return_box(agent_box[response_number].box, box);
 	cout<<"Box check: "<<box_checked[response_number]<<endl;
+	boxcheck_msg.agent_number = response_number;
 	boxcheck_msg.check.data = box_checked[response_number];
 	boxcheck_pub.publish(boxcheck_msg);
 	cout<<box<<endl;
