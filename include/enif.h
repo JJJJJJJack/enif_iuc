@@ -242,15 +242,18 @@ void get_box(char* buf, std_msgs::Float64MultiArray &box)
 {
   double latitude, longitude, width, height, angle;
   double staytime, wp_height, velocity, wp_radius;
+  double stepwidth, stepheight;
   CharToDouble(buf+3,  longitude);
   CharToDouble(buf+11, latitude);
   CharToDouble(buf+19, width);
   CharToDouble(buf+27, height);
   CharToDouble(buf+35, angle);
-  staytime  = CharToInt(buf[43]);
-  wp_height = CharToInt(buf[44])/20.0;
-  velocity  = CharToInt(buf[45]);
-  wp_radius = CharToInt(buf[46]);
+  staytime   = CharToInt(buf[43]);
+  wp_height  = CharToInt(buf[44])/20.0;
+  velocity   = CharToInt(buf[45]);
+  wp_radius  = CharToInt(buf[46]);
+  stepwidth  = CharToInt(buf[47]);
+  stepheight = CharToInt(buf[48]);
   box.data.push_back(longitude);
   box.data.push_back(latitude);
   box.data.push_back(width);
@@ -260,6 +263,8 @@ void get_box(char* buf, std_msgs::Float64MultiArray &box)
   box.data.push_back(wp_height);
   box.data.push_back(velocity);
   box.data.push_back(wp_radius);
+  box.data.push_back(stepwidth);
+  box.data.push_back(stepheight);
 }
 
 bool extract_GPS_from_MPS(mps_driver::MPS mps_read)

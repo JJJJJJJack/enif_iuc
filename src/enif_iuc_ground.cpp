@@ -92,7 +92,7 @@ bool check_box(std_msgs::Float64MultiArray sendbox, std_msgs::Float64MultiArray 
   bool result = false;
   if(sendbox.data.size() != responsebox.data.size())
     return false;
-  for(int i = 0; i < 7; i++){
+  for(int i = 0; i < 11; i++){
     if(sendbox.data[i]!=responsebox.data[i])
       return false;
   }
@@ -104,7 +104,7 @@ bool check_return_box(std_msgs::Float64MultiArray sendbox, std_msgs::Float64Mult
   bool result = false;
   if(sendbox.data.size() != responsebox.data.size())
     return false;
-  for(int i = 0; i < 7; i++){
+  for(int i = 0; i < 11; i++){
     if(fabs(sendbox.data[i] - responsebox.data[i]) > 1e-04)
       return false;
   }
@@ -232,7 +232,9 @@ void form_box(char* buf, int agent_number, std_msgs::Float64MultiArray &box)
   buf[44] = IntToChar((int)(box.data[6]*20.0));
   buf[45] = IntToChar((int)box.data[7]);
   buf[46] = IntToChar((int)box.data[8]);
-  buf[47] = 0x0A;
+  buf[47] = IntToChar((int)box.data[9]);
+  buf[48] = IntToChar((int)box.data[10]);
+  buf[49] = 0x0A;
 }
 
 int main(int argc, char **argv)
@@ -386,7 +388,7 @@ int main(int argc, char **argv)
 	boxcheck_msg.check.data = box_checked[response_number];
 	boxcheck_pub.publish(boxcheck_msg);
 	cout<<box<<endl;
-	buf = buf+48;
+	buf = buf+50;
 	break;
       case COMMAND_TAKEOFF:
 	//only verifies response from the agent
