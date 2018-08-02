@@ -323,7 +323,7 @@ void get_mps(char* buf)
     mps.gasID = str;
   }
   float percentLEL, temperature, pressure, humidity;
-  double GPS_latitude, GPS_longitude;
+  double GPS_latitude, GPS_longitude, local_height;
   CharToFloat(buf+4, percentLEL);
   mps.percentLEL = percentLEL;
   CharToFloat(buf+4+4, temperature);
@@ -336,6 +336,8 @@ void get_mps(char* buf)
   mps.GPS_latitude = GPS_latitude;
   CharToDouble(buf+4+24, GPS_longitude);
   mps.GPS_longitude = GPS_longitude;
+  CharToDouble(buf+4+32, local_height);
+  mps.GPS_altitude = local_height;
   buf = buf + 44;
   
 }
