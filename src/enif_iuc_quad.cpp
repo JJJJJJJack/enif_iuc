@@ -49,7 +49,7 @@ void mps_callback(const mps_driver::MPS &new_message)
 void GPS_callback(const sensor_msgs::NavSatFix &new_message)
 {
   gps = new_message;
-  NEW_MPS = true;
+  NEW_GPS = true;
 }
 
 void height_callback(const sensor_msgs::Range &new_message)
@@ -226,11 +226,11 @@ int main(int argc, char **argv)
 	  //cout<<"Receiving mps quad info ";
 	  ROS_INFO_THROTTLE(1,"Receiving mps quad info from Agent %d", target_number);
 	  checksum_result = checksum(buf);
-	  get_mps(buf);
+	  get_other_mps(buf);
 	  buf = buf + 45;
 	  agent_mps.agent_number = target_number;
-	  agent_mps.mps = mps;
-	  if(extract_GPS_from_MPS(mps)){
+	  agent_mps.mps = mps_other;
+	  if(check_MPS(mps_other)){
 	    mps_pub.publish(agent_mps);
 	  }
 	  if(NEW_MPS){
@@ -358,12 +358,12 @@ int main(int argc, char **argv)
 	char send_buf[256] = {'\0'};
 	switch(send_count){
 	case 0:
-	  if(NEW_MPS){
+	  if(NEW_GPS){
 	    form_mps(send_buf);
 	    form_checksum(send_buf);
 	    string send_data(send_buf);
 	    USBPORT.write(send_data);
-	    NEW_MPS = false;
+	    NEW_GPS = false;
 	  }
 	  break;
 	case 1:

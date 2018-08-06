@@ -243,7 +243,8 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
 
   ros::Publisher  state_pub    = n.advertise<enif_iuc::AgentState>("agentState", 1);
-  ros::Publisher  mps_pub      = n.advertise<enif_iuc::AgentMPS>("mps_data", 1);
+  ros::Publisher  mps_pub        = n.advertise<enif_iuc::AgentMPS>("mps_data", 1);  
+  ros::Publisher  agentHomes_pub = n.advertise<geographic_msgs::GeoPoint>("agent_home", 1);  
   ros::Publisher  GPS_pub      = n.advertise<enif_iuc::AgentGlobalPosition>("global_position", 1);
   ros::Publisher  height_pub   = n.advertise<enif_iuc::AgentHeight>("ext_height", 1);
   ros::Publisher  battery_pub  = n.advertise<enif_iuc::AgentBatteryState>("battery", 1);
@@ -473,12 +474,13 @@ int main(int argc, char **argv)
 	  //send ave home location to all agents
 	  if (recHome>5 && agentHomes.size()!= 0){
 	    //cout<<"num of agent homes: "<<agentHomes.size()<<endl;
-	    getAvehome();	    
+	    getAvehome();
 	    cout<<"sending averageHome: "<<averageHome.latitude<<", "<<averageHome.longitude<<", "<<averageHome.altitude<<endl;
 	    form_home(send_buf, 100, averageHome); // sending as agent_number: 100 to recieve on quad side
 	    form_checksum(send_buf);
 	    std::vector<uint8_t> send_data(send_buf, send_buf+256);
 	    USBPORT.write(send_data);
+	    agentHomes_pub.publish(averageHome);
 	    recHome = 0;
 
 	  }		  

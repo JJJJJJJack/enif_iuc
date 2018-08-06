@@ -66,7 +66,7 @@ int GAS_ID = 0;
 
 std_msgs::UInt8 state;
 sensor_msgs::NavSatFix gps;
-mps_driver::MPS mps;
+mps_driver::MPS mps, mps_other;
 sensor_msgs::Range height;
 sensor_msgs::BatteryState battery;
 
@@ -282,6 +282,18 @@ bool extract_GPS_from_MPS(mps_driver::MPS mps_read)
   return false;
 }
 
+bool check_MPS(mps_driver::MPS mps_read)
+{
+  if(checkValue(mps_read.GPS_latitude, -180, 180) &&
+     checkValue(mps_read.GPS_longitude, -180, 180) &&
+     checkValue(mps_read.GPS_altitude, 0, 40)){
+    return true;
+  }else{
+    cout<<mps_read.GPS_latitude<<" "<<mps_read.GPS_longitude<<" "<<mps_read.GPS_altitude<<endl;
+  }
+  return false;
+}
+
 
 bool checkHome(mavros_msgs::HomePosition myhome)
 {
@@ -338,6 +350,39 @@ void get_mps(char* buf)
   mps.GPS_longitude = GPS_longitude;
   CharToDouble(buf+4+32, local_height);
   mps.GPS_altitude = local_height;
+  buf = buf + 44;
+  
+}
+
+void get_other_mps(char* buf)
+{
+  GAS_ID = CharToInt(buf[3]);
+  if(GAS_ID == GAS_PROPANE){
+    string str = "Propane";
+    mps_other.gasID = str;
+  }else if(GAS_ID == GAS_METHANE){
+    string str = "Methane";
+    mps_other.gasID = str;
+  }else{
+    string str = "None";
+    mps_other.gasID = str;
+  }
+  float percentLEL, temperature, pressure, humidity;
+  double GPS_latitude, GPS_longitude, local_height;
+  CharToFloat(buf+4, percentLEL);
+  mps_other.percentLEL = percentLEL;
+  CharToFloat(buf+4+4, temperature);
+  mps_other.temperature = temperature;
+  CharToFloat(buf+4+8, pressure);
+  mps_other.pressure = pressure;
+  CharToFloat(buf+4+12, humidity);
+  mps_other.humidity = humidity;
+  CharToDouble(buf+4+16, GPS_latitude);
+  mps_other.GPS_latitude = GPS_latitude;
+  CharToDouble(buf+4+24, GPS_longitude);
+  mps_other.GPS_longitude = GPS_longitude;
+  CharToDouble(buf+4+32, local_height);
+  mps_other.GPS_altitude = local_height;
   buf = buf + 44;
   
 }
