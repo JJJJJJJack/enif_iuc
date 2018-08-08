@@ -1,4 +1,3 @@
-
 #include "enif.h"
 
 #include "enif_iuc/AgentTakeoff.h"
