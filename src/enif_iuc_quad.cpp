@@ -12,7 +12,7 @@
 #include "enif_iuc/AgentHome.h"
 #include "enif_iuc/AgentLocal.h"
 
-bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false, NEW_HOME = false, NEW_LOCAL = false;
+bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false, NEW_HOME = false, NEW_LOCAL = false, NEW_TARGETE=false, NEW_REALTARGET=false;
 
 using namespace std;
 
@@ -27,6 +27,25 @@ void home_callback(const mavros_msgs::HomePosition &new_message)
   home = new_message;
   NEW_HOME = true;
 }
+
+void targetEGPS_callback(const geographic_msgs::GeoPoint &new_message)
+{
+  if (checkGeo(new_message, targetE))//check for difference
+    {
+      targetE = new_message;
+      NEW_TARGETE = true;
+    }
+}
+
+void realTargetGPS_callback(const geographic_msgs::GeoPoint &new_message)
+{
+  if (checkGeo(new_message, realTarget))
+    {
+      realTarget = new_message;
+      NEW_REALTARGET = true;
+    }
+}
+
 
 void local_callback(const nav_msgs::Odometry &new_message)
 {
@@ -80,6 +99,27 @@ void form_mps(char* buf)
   // Clear the percentLEL to make sure we don't pub wrong data when we get new GPS
   clearmps();
 }
+
+void form_targetE(char* buf)
+{
+  buf[1] = IntToChar(AGENT_NUMBER);
+  buf[2] = IntToChar(COMMAND_TARGETE);
+  DoubleToChar(buf+3, targetE.latitude);
+  DoubleToChar(buf+3+8, targetE.longitude);
+  DoubleToChar(buf+3+8+8, targetE.altitude);
+  buf[3+8+8+8] = 0x0A;
+}
+
+void form_realTarget(char* buf)
+{
+  buf[1] = IntToChar(AGENT_NUMBER);
+  buf[2] = IntToChar(COMMAND_REALTARGET);  
+  DoubleToChar(buf+3, realTarget.latitude);
+  DoubleToChar(buf+3+8, realTarget.longitude);
+  DoubleToChar(buf+3+8+8, realTarget.altitude);
+  buf[3+8+8+8] = 0x0A;
+}
+
 
 void form_local(char* buf)
 {
@@ -155,6 +195,9 @@ int main(int argc, char **argv)
   ros::Subscriber sub_GPS     = n.subscribe("mavros/global_position/global",1,GPS_callback);
   ros::Subscriber sub_height  = n.subscribe("mavros/distance_sensor/lidarlite_pub",1,height_callback);
   ros::Subscriber sub_battery = n.subscribe("mavros/battery",1,battery_callback);
+  
+  ros::Subscriber sub_targetE    = n.subscribe("/realTargetGPS",1, targetEGPS_callback);
+  ros::Subscriber sub_realTarget = n.subscribe("/pf/targetGPS_",1, realTargetGPS_callback);
 
   ros::Subscriber sub_home    = n.subscribe("/mavros/home_position/home",1,home_callback);
   ros::Subscriber sub_local   = n.subscribe("/mavros/global_position/local",1,local_callback);
@@ -166,6 +209,8 @@ int main(int argc, char **argv)
   n.getParam("/enif_iuc_quad/sendLocal", sendLocal);
   n.getParam("/enif_iuc_quad/sendHome", sendHome);
   n.getParam("/enif_iuc_quad/sendBat", sendBat);
+  n.getParam("/enif_iuc_quad/sendTargetE", sendTargetE);
+  n.getParam("/enif_iuc_quad/sendRealTarget", sendRealTarget);
   cout<<"sendLocal: "<<sendLocal<<endl;
   cout<<"sendHome: "<<sendHome<<endl;
   cout<<"sendBat: "<<sendBat<<endl;
@@ -402,10 +447,28 @@ int main(int argc, char **argv)
 	    NEW_BATTERY = false;
 	  }
 	  break;
+	case 5:
+	  if(NEW_TARGETE && sendTargetE){	    
+	    form_targetE(send_buf);
+	    form_checksum(send_buf);	    
+	    string send_data(send_buf);	    
+	    USBPORT.write(send_data);
+	    NEW_TARGETE = false;
+	  }
+	  break;
+	case 6:
+	  if(NEW_REALTARGET && sendRealTarget){
+	    form_realTarget(send_buf);
+	    form_checksum(send_buf);	    
+	    string send_data(send_buf);	    
+	    USBPORT.write(send_data);
+	    NEW_REALTARGET = false;
+	  }
+	  break;	  
 	default:
 	  break;
 	}
-	if(send_count <= 4) send_count++;
+	if(send_count <= 6) send_count++;
 	else send_count = 0;
       }
     

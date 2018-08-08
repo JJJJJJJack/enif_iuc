@@ -49,6 +49,8 @@ using namespace std;
 #define COMMAND_HOME     8
 #define COMMAND_LOCAL    9
 #define COMMAND_AVEHOME  10
+#define COMMAND_TARGETE    11
+#define COMMAND_REALTARGET 12
 
 #define GAS_NONE    0
 #define GAS_PROPANE 1
@@ -58,6 +60,8 @@ using namespace std;
 bool sendLocal = false;
 bool sendBat   = false;
 bool sendHome  = true;
+bool sendRealTarget = true;
+bool sendTargetE = true;
 
 std::string USB;
 int AGENT_NUMBER = 0;
@@ -72,6 +76,9 @@ sensor_msgs::BatteryState battery;
 
 mavros_msgs::HomePosition home;
 nav_msgs::Odometry local;
+
+geographic_msgs::GeoPoint targetE;
+geographic_msgs::GeoPoint realTarget;
 
 //containers for enif_iuc_ground
 std::vector<geographic_msgs::GeoPoint> agentHomes;
@@ -295,6 +302,17 @@ bool check_MPS(mps_driver::MPS mps_read)
 }
 
 
+bool checkGeo(geographic_msgs::GeoPoint newData, geographic_msgs::GeoPoint storedData)
+{
+  // check if newData is new compared with storedData
+  if(newData.latitude != storedData.latitude || newData.longitude != storedData.longitude)
+    {
+      return true;
+    }
+  return false;
+}
+  
+
 bool checkHome(mavros_msgs::HomePosition myhome)
 {
   /* bool checkValue(double var, double min, double max) */
@@ -424,6 +442,36 @@ void get_home(char* buf)
   home.geo.altitude = altitude;
   buf = buf + 28;
 }
+
+void get_targetE(char* buf)
+{
+  double latitude, longitude, altitude;
+  
+  CharToDouble(buf+3, latitude);
+  CharToDouble(buf+11, longitude);
+  CharToDouble(buf+19, altitude);
+  
+  targetE.latitude = latitude;
+  targetE.longitude = longitude;  
+  targetE.altitude = altitude;
+  buf = buf + 28;
+}
+
+
+void get_realTarget(char* buf)
+{
+  double latitude, longitude, altitude;
+  
+  CharToDouble(buf+3, latitude);
+  CharToDouble(buf+11, longitude);
+  CharToDouble(buf+19, altitude);
+  
+  realTarget.latitude = latitude;
+  realTarget.longitude = longitude;  
+  realTarget.altitude = altitude;
+  buf = buf + 28;
+}
+
 
 void getAvehome(void){
   // std::cout<<"get ave home"<<std::endl;

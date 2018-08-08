@@ -9,6 +9,7 @@
 #include "enif_iuc/AgentBatteryState.h"
 #include "enif_iuc/AgentBox.h"
 #include "enif_iuc/AgentWaypointCheck.h"
+#include "enif_iuc/AgentSource.h"
 
 bool NEW_TAKEOFF = false, NEW_WP = false, NEW_BOX = false;
 enif_iuc::AgentTakeoff agent_takeoff[256];
@@ -250,6 +251,9 @@ int main(int argc, char **argv)
   ros::Publisher  battery_pub  = n.advertise<enif_iuc::AgentBatteryState>("battery", 1);
   ros::Publisher  wpcheck_pub  = n.advertise<enif_iuc::AgentWaypointCheck>("waypoint_check", 1);
   ros::Publisher  boxcheck_pub = n.advertise<enif_iuc::AgentWaypointCheck>("rotated_box_check", 1);
+  ros::Publisher  agent_TargetE_pub  = n.advertise<enif_iuc::AgentSource>("agent_targetE", 1);
+  ros::Publisher  realTarget_pub     = n.advertise<geographic_msgs::GeoPoint>("realTarget", 1);
+  
   ros::Subscriber sub_takeoff  = n.subscribe("takeoff_command",5,takeoff_callback);
   ros::Subscriber sub_wp       = n.subscribe("waypoint_list",5,wp_callback);
   ros::Subscriber sub_box      = n.subscribe("rotated_box",1,box_callback);
@@ -424,6 +428,24 @@ int main(int argc, char **argv)
 	}
 	buf = buf+28;
 	break;
+      case COMMAND_TARGETE:
+	{
+	  enif_iuc::AgentSource agentSource;
+	  agentSource.agent_number = get_target_number(buf);	
+	  get_targetE(buf);
+	  agentSource.source = realTarget;	
+	  agent_TargetE_pub.publish(agentSource);
+	  buf = buf+28;	
+	break;
+	}
+      case COMMAND_REALTARGET:
+	{
+	  response_number = get_target_number(buf);	
+	  get_realTarget(buf);	
+	  realTarget_pub.publish(realTarget);
+	  buf = buf+28;
+	  break;
+	}
       default:
 	break;
       }

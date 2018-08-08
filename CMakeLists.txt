@@ -34,6 +34,7 @@ add_message_files(
   AgentHome.msg
   AgentLocal.msg
   AgentWaypointCheck.msg
+  AgentSource.msg
 #   Message2.msg
 )
 
