@@ -30,11 +30,9 @@ void home_callback(const mavros_msgs::HomePosition &new_message)
 
 void targetEGPS_callback(const geographic_msgs::GeoPoint &new_message)
 {
-  if (checkGeo(new_message, targetE))//check for difference
-    {
-      targetE = new_message;
-      NEW_TARGETE = true;
-    }
+  ROS_INFO_THROTTLE(1,"getting target estimate");
+  targetE = new_message;
+  NEW_TARGETE = true;
 }
 
 void realTargetGPS_callback(const geographic_msgs::GeoPoint &new_message)
@@ -196,8 +194,8 @@ int main(int argc, char **argv)
   ros::Subscriber sub_height  = n.subscribe("mavros/distance_sensor/lidarlite_pub",1,height_callback);
   ros::Subscriber sub_battery = n.subscribe("mavros/battery",1,battery_callback);
   
-  ros::Subscriber sub_targetE    = n.subscribe("/realTargetGPS",1, targetEGPS_callback);
-  ros::Subscriber sub_realTarget = n.subscribe("/pf/targetGPS_",1, realTargetGPS_callback);
+  ros::Subscriber sub_realTarget = n.subscribe("/realTargetGPS",1, realTargetGPS_callback);
+  ros::Subscriber sub_targetE    = n.subscribe("/pf/targetGPS_",1, targetEGPS_callback);
 
   ros::Subscriber sub_home    = n.subscribe("/mavros/home_position/home",1,home_callback);
   ros::Subscriber sub_local   = n.subscribe("/mavros/global_position/local",1,local_callback);

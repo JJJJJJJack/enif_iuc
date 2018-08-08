@@ -287,7 +287,7 @@ int main(int argc, char **argv)
     // Get command type
     int command_type = get_command_type(buf);
     int c=0;
-    while(buf[0]!='\0' && (command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_STATE || command_type==COMMAND_WAYPOINT || command_type==COMMAND_BOX)){
+    while(buf[0]!='\0' && (command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_STATE || command_type==COMMAND_WAYPOINT || command_type==COMMAND_BOX || command_type==COMMAND_TARGETE || command_type==COMMAND_REALTARGET)){
       //cout<<strlen(buf)<<endl;
     // Get the target number first
     int target_number = get_target_number(buf);
@@ -433,7 +433,7 @@ int main(int argc, char **argv)
 	  enif_iuc::AgentSource agentSource;
 	  agentSource.agent_number = get_target_number(buf);	
 	  get_targetE(buf);
-	  agentSource.source = realTarget;	
+	  agentSource.source = targetE;
 	  agent_TargetE_pub.publish(agentSource);
 	  buf = buf+28;	
 	break;
