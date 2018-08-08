@@ -30,7 +30,6 @@ void home_callback(const mavros_msgs::HomePosition &new_message)
 
 void targetEGPS_callback(const geographic_msgs::GeoPoint &new_message)
 {
-  ROS_INFO_THROTTLE(1,"getting target estimate");
   targetE = new_message;
   NEW_TARGETE = true;
 }
