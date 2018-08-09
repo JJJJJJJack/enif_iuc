@@ -44,8 +44,11 @@ bool check_source(geographic_msgs::GeoPoint sendsource, geographic_msgs::GeoPoin
 
 bool check_return_source(geographic_msgs::GeoPoint sendsource, geographic_msgs::GeoPoint responsesource)
 {
-  if(fabs(sendsource.latitude - responsesource.latitude)>1E-04 || fabs(sendsource.longitude != responsesource.longitude)>1E-04)
+  if(fabs(sendsource.latitude - responsesource.latitude)>1e-04 || fabs(sendsource.longitude - responsesource.longitude)>1e-04){
+    cout<<sendsource.latitude - responsesource.latitude<<endl;
+    cout<<sendsource.longitude - responsesource.longitude<<endl;
     return false;
+  }
   return true;
 }
 
@@ -458,6 +461,7 @@ int main(int argc, char **argv)
 	  response_number = get_target_number(buf);
 	  get_realTarget(buf);
 	  source_checked[response_number]= check_return_source(agent_source[response_number].source, realTarget);
+	  cout<<"What we think it should be"<<agent_source[response_number].source<<endl;
 	  cout<<"source check: "<<source_checked[response_number]<<endl;
 	  cout<<realTarget<<endl;
 	  buf = buf+28;
