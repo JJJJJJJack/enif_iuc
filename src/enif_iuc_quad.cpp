@@ -292,12 +292,13 @@ int main(int argc, char **argv)
 	      if(NEW_REALTARGET){
 		realTarget = my_realTarget;
 	      }
-	      char *tempbuf;
 	      int tempbuf_size = 28;
+	      char tempbuf[tempbuf_size];
 	      cut_buf(buf, tempbuf, tempbuf_size);
-	      tempbuf[1]=AGENT_NUMBER;
+	      tempbuf[1]=IntToChar(AGENT_NUMBER);
 	      string send_data(tempbuf);
 	      USBPORT.write(send_data);
+
 	    }
 	  break;	  
 	default:
@@ -310,7 +311,6 @@ int main(int argc, char **argv)
       // Get command type
       cout<<"Receiving command: ";
       bool checksum_result = false;
-      char *tempbuf;
       switch(command_type){
       case COMMAND_WAYPOINT:{
 	// Publish waypoint
@@ -321,7 +321,9 @@ int main(int argc, char **argv)
 	get_waypoints(waypoint_number, buf, waypoint_list);
 	checksum_result = checksum(buf);
 	cout<<waypoint_list<<endl;
+
 	int tempbuf_size = get_waypointlist_buf_size(waypoint_number)+1;
+	char tempbuf[tempbuf_size];
 	cut_buf(buf, tempbuf, tempbuf_size);
 	string send_data(tempbuf);
 	USBPORT.write(send_data);
@@ -335,6 +337,7 @@ int main(int argc, char **argv)
 	checksum_result = checksum(buf);
 	cout<<box<<endl;
 	int tempbuf_size = 50;
+	char tempbuf[tempbuf_size];
 	cut_buf(buf, tempbuf, tempbuf_size);
 	string send_data(tempbuf);
 	USBPORT.write(send_data);
@@ -350,6 +353,7 @@ int main(int argc, char **argv)
 	  cout<< " Land"<<endl;
 	checksum_result = checksum(buf);
 	int tempbuf_size = 5;
+	char tempbuf[tempbuf_size];
 	cut_buf(buf, tempbuf, tempbuf_size);
 	string send_data(tempbuf);
 	USBPORT.write(send_data);

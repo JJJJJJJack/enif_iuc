@@ -239,8 +239,8 @@ void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypo
 
 void cut_buf(char* buf_0, char* buf_1, int size)
 {
-  char tempbuf[size];
-  buf_1 = tempbuf;
+  //  char tbuf[size];
+  //  buf_1 = tbuf;
   strncpy(buf_1, buf_0, size-1);
   buf_1[size-1] = 0x0A;
   buf_0 += size;
