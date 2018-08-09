@@ -11,17 +11,19 @@
 #include "enif_iuc/AgentWaypointCheck.h"
 #include "enif_iuc/AgentSource.h"
 
-bool NEW_TAKEOFF = false, NEW_WP = false, NEW_BOX = false;
 enif_iuc::AgentTakeoff agent_takeoff[256];
 enif_iuc::AgentWaypointTask agent_wp[256];
 enif_iuc::AgentBox agent_box[256];
 enif_iuc::AgentWaypointCheck wpcheck_msg;
 enif_iuc::AgentWaypointCheck boxcheck_msg;
+enif_iuc::AgentSource agent_source[256];
+
 int recHome = 0;
-int agent_number_wp = 0, agent_number_box = 0, agent_number_takeoff = 0;
+int agent_number_wp = 0, agent_number_box = 0, agent_number_takeoff = 0, agent_number_source = 0;
 bool waypoint_checked[256] = {true, true, true, true, true};
 bool box_checked[256] = {true, true, true, true, true};
 bool takeoff_checked[256] = {true, true, true, true, true};
+bool source_checked[256] = {true, true, true, true, true};
 
 using namespace std;
 
@@ -33,10 +35,18 @@ bool check_takeoff(std_msgs::Bool sendtakeoff, std_msgs::Bool responsetakeoff)
   return true;
 }
 
+bool check_source(geographic_msgs::GeoPoint sendsource, geographic_msgs::GeoPoint responsesource)
+{
+  if(sendsource.latitude != responsesource.latitude || sendsource.longitude != responsesource.longitude)
+    return false;
+  return true;
+}
+
+
 bool check_waypoints(enif_iuc::WaypointTask sendwp, enif_iuc::WaypointTask responsewp)
 {
   bool result = false;
-
+  // Return false if there's anything different
   if (sendwp.velocity != responsewp.velocity || sendwp.damping_distance != responsewp.damping_distance)
     return false;
   else
@@ -134,6 +144,17 @@ void wp_callback(const enif_iuc::AgentWaypointTask &new_message)
     }
 }
 
+void realTarget_callback(const enif_iuc::AgentSource &new_message){
+
+  agent_number_source = new_message.agent_number;  
+  bool check_result = check_source(new_message.source,agent_source[agent_number_source].source);
+
+  if (check_result==false){// overwrite when new source coming in
+    agent_source[agent_number_source] = new_message;
+    source_checked[agent_number_source] = false;
+  }
+}
+
 void box_callback(const enif_iuc::AgentBox &new_message)
 {
   agent_number_box = new_message.agent_number;
@@ -172,6 +193,16 @@ void get_battery(char* buf)
   CharToFloat(buf+3, voltage);
   battery.voltage = voltage;
   battery.header.stamp = ros::Time::now();
+}
+
+void form_realTarget(char* buf, int agent_number, geographic_msgs::GeoPoint sendSource)
+{
+  buf[1] = IntToChar(agent_number);
+  buf[2] = IntToChar(COMMAND_REALTARGET);  
+  DoubleToChar(buf+3, sendSource.latitude);
+  DoubleToChar(buf+3+8, sendSource.longitude);
+  DoubleToChar(buf+3+8+8, sendSource.altitude);
+  buf[3+8+8+8] = 0x0A;
 }
 
 void form_takeoff(char* buf, int agent_number, std_msgs::Bool takeoff)
@@ -251,12 +282,12 @@ int main(int argc, char **argv)
   ros::Publisher  battery_pub  = n.advertise<enif_iuc::AgentBatteryState>("battery", 1);
   ros::Publisher  wpcheck_pub  = n.advertise<enif_iuc::AgentWaypointCheck>("waypoint_check", 1);
   ros::Publisher  boxcheck_pub = n.advertise<enif_iuc::AgentWaypointCheck>("rotated_box_check", 1);
-  ros::Publisher  agent_TargetE_pub  = n.advertise<enif_iuc::AgentSource>("agent_targetE", 1);
-  ros::Publisher  realTarget_pub     = n.advertise<geographic_msgs::GeoPoint>("realTarget", 1);
+  ros::Publisher  agent_targetE_pub  = n.advertise<enif_iuc::AgentSource>("agent_targetE", 1);
   
-  ros::Subscriber sub_takeoff  = n.subscribe("takeoff_command",5,takeoff_callback);
-  ros::Subscriber sub_wp       = n.subscribe("waypoint_list",5,wp_callback);
-  ros::Subscriber sub_box      = n.subscribe("rotated_box",1,box_callback);
+  ros::Subscriber sub_takeoff    = n.subscribe("takeoff_command",5,takeoff_callback);
+  ros::Subscriber sub_wp         = n.subscribe("waypoint_list",5,wp_callback);
+  ros::Subscriber sub_box        = n.subscribe("rotated_box",1,box_callback);
+  ros::Subscriber sub_realTarget = n.subscribe("source",1,realTarget_callback);
   
   ros::Rate loop_rate(100);
 
@@ -404,45 +435,24 @@ int main(int argc, char **argv)
 	cout<<takeoff_command<<endl;
 	buf = buf+5;
 	break;
-      case COMMAND_LOCAL:
-	buf = buf+60;
-	break;
-      case COMMAND_HOME:
-	response_number = get_target_number(buf);	
-	get_home(buf);
-	if (checkHome(home)){
-	  std::vector<int>::iterator it;
-	  it = std::find(agentID.begin(), agentID.end(), response_number);
-	  if (it != agentID.end()){ // if i already have gps    
-	    // overwrite it
-	    int i = it - agentID.begin();
-	    agentHomes[i] = home.geo;
-	  }
-	  else{
-	    // push new home back        	
-	    agentHomes.push_back(home.geo);
-	    agentID.push_back(response_number);
-	  }	  
-	  //cout<<"Recieved agent "<< response_number<<"'s home: "<<agentHomes[response_number].latitude<<", "<<agentHomes[response_number].longitude<<", "<<agentHomes[response_number].altitude<<", "<<checksum(buf)<<", "<<agentHomes.size()<<endl;
-	  recHome += 1;
-	}
-	buf = buf+28;
-	break;
       case COMMAND_TARGETE:
 	{
 	  enif_iuc::AgentSource agentSource;
 	  agentSource.agent_number = get_target_number(buf);	
 	  get_targetE(buf);
 	  agentSource.source = targetE;
-	  agent_TargetE_pub.publish(agentSource);
+	  agent_targetE_pub.publish(agentSource);
 	  buf = buf+28;	
 	break;
 	}
       case COMMAND_REALTARGET:
 	{
-	  response_number = get_target_number(buf);	
-	  get_realTarget(buf);	
-	  realTarget_pub.publish(realTarget);
+	  //only verifies response from the agent
+	  response_number = get_target_number(buf);
+	  get_realTarget(buf);
+	  source_checked[response_number]= check_source(agent_source[response_number].source, realTarget);
+	  cout<<"source check: "<<source_checked[response_number]<<endl;
+	  cout<<realTarget<<endl;
 	  buf = buf+28;
 	  break;
 	}
@@ -453,6 +463,7 @@ int main(int argc, char **argv)
     if(c++>50)
       break;
     }
+    
     if(count%3 == 0)
       {
 	char send_buf[256] = {'\0'};
@@ -462,7 +473,6 @@ int main(int argc, char **argv)
 	    {
 	      form_takeoff(send_buf, agent_takeoff[agent_number_takeoff].agent_number, agent_takeoff[agent_number_takeoff].takeoff_command);
 	      form_checksum(send_buf);
-	      NEW_TAKEOFF = false;
 	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
 	      USBPORT.write(send_data);
 	      cout<<"Send takeoff command to agent "<<agent_number_takeoff<<endl;
@@ -474,7 +484,6 @@ int main(int argc, char **argv)
 	    {
 	      form_box(send_buf, agent_box[agent_number_box].agent_number, agent_box[agent_number_box].box);
 	      form_checksum(send_buf);
-	      NEW_BOX = false;
 	      //string send_data(send_buf);
 	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
 	      USBPORT.write(send_data);
@@ -486,27 +495,21 @@ int main(int argc, char **argv)
 	      form_waypoint_info(send_buf, agent_wp[agent_number_wp].agent_number, agent_wp[agent_number_wp].waypoint_list.mission_waypoint.size(), agent_wp[agent_number_wp].waypoint_list);
 	      form_waypoints(send_buf, agent_wp[agent_number_wp].waypoint_list.mission_waypoint.size(), agent_wp[agent_number_wp].waypoint_list);
 	      form_checksum(send_buf);
-	      NEW_WP = false;
 	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
 	      USBPORT.write(send_data);
 	      cout<<"send waypoint to agent "<<agent_number_wp<<endl;
 	    }
 	  break;
 	case 2:
-	  //send ave home location to all agents
-	  if (recHome>5 && agentHomes.size()!= 0){
-	    //cout<<"num of agent homes: "<<agentHomes.size()<<endl;
-	    getAvehome();
-	    cout<<"sending averageHome: "<<averageHome.latitude<<", "<<averageHome.longitude<<", "<<averageHome.altitude<<endl;
-	    form_home(send_buf, 100, averageHome); // sending as agent_number: 100 to recieve on quad side
-	    form_checksum(send_buf);
-	    std::vector<uint8_t> send_data(send_buf, send_buf+256);
-	    USBPORT.write(send_data);
-	    agentHomes_pub.publish(averageHome);
-	    recHome = 0;
-
-	  }		  
-	  break;	  
+	  if(source_checked[agent_number_source] == false && agent_number_source > 0)
+	    {
+	      form_realTarget(send_buf, 100, agent_source[agent_number_source].source); // broadcast
+	      form_checksum(send_buf);
+	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
+	      USBPORT.write(send_data);
+	      cout<<"Send source command to agent "<<agent_number_source<<endl;
+	    }
+	  break;
 	default:
 	  break;
 	}
