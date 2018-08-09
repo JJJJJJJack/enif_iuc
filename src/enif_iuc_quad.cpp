@@ -33,16 +33,6 @@ void targetEGPS_callback(const geographic_msgs::GeoPoint &new_message)
   NEW_TARGETE = true;
 }
 
-void realTargetGPS_callback(const geographic_msgs::GeoPoint &new_message)
-{
-  if (checkGeo(new_message, realTarget))
-    {
-      realTarget = new_message;
-      NEW_REALTARGET = true;
-    }
-}
-
-
 void local_callback(const nav_msgs::Odometry &new_message)
 {
   local = new_message;
@@ -181,7 +171,6 @@ int main(int argc, char **argv)
   ros::Subscriber sub_height  = n.subscribe("mavros/distance_sensor/lidarlite_pub",1,height_callback);
   ros::Subscriber sub_battery = n.subscribe("mavros/battery",1,battery_callback);
   
-  ros::Subscriber sub_realTarget = n.subscribe("/realTargetGPS",1, realTargetGPS_callback);
   ros::Subscriber sub_targetE    = n.subscribe("/pf/targetGPS_",1, targetEGPS_callback);
 
   ros::Subscriber sub_home    = n.subscribe("/mavros/home_position/home",1,home_callback);
@@ -286,9 +275,7 @@ int main(int argc, char **argv)
 		agent_home.home.header.stamp = ros::Time::now();		
 		agent_home.home.geo.latitude = realTarget.latitude;
 		agent_home.home.geo.longitude = realTarget.longitude;
-	      }	  
-	      if(NEW_REALTARGET){
-		realTarget = my_realTarget;
+		NEW_REALTARGET = true;
 	      }
 	      int tempbuf_size = 28;
 	      char tempbuf[tempbuf_size];
@@ -303,8 +290,6 @@ int main(int argc, char **argv)
 	default:
 	  break;
 	}
-	realTarget_pub.publish(realTarget);
-	home_pub.publish(agent_home);
 	if(command_type==COMMAND_WAYPOINT || command_type==COMMAND_TAKEOFF || command_type==COMMAND_BOX)
 	  break;
       }
@@ -382,6 +367,11 @@ int main(int argc, char **argv)
 	break;
       }
     }
+    if (NEW_REALTARGET){
+      realTarget_pub.publish(realTarget);
+      home_pub.publish(agent_home);
+    }
+
     // Send GPS mps state and battery data every 1 sec
     if(count%2 == 0)
       {

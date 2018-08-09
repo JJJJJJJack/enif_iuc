@@ -8,14 +8,15 @@
 #include "enif_iuc/AgentHeight.h"
 #include "enif_iuc/AgentBatteryState.h"
 #include "enif_iuc/AgentBox.h"
-#include "enif_iuc/AgentWaypointCheck.h"
+#include "enif_iuc/AgentCheck.h"
 #include "enif_iuc/AgentSource.h"
 
 enif_iuc::AgentTakeoff agent_takeoff[256];
 enif_iuc::AgentWaypointTask agent_wp[256];
 enif_iuc::AgentBox agent_box[256];
-enif_iuc::AgentWaypointCheck wpcheck_msg;
-enif_iuc::AgentWaypointCheck boxcheck_msg;
+enif_iuc::AgentCheck wpcheck_msg;
+enif_iuc::AgentCheck boxcheck_msg;
+enif_iuc::AgentCheck sourcecheck_msg;
 enif_iuc::AgentSource agent_source[256];
 
 int recHome = 0;
@@ -290,9 +291,10 @@ int main(int argc, char **argv)
   ros::Publisher  GPS_pub      = n.advertise<enif_iuc::AgentGlobalPosition>("global_position", 1);
   ros::Publisher  height_pub   = n.advertise<enif_iuc::AgentHeight>("ext_height", 1);
   ros::Publisher  battery_pub  = n.advertise<enif_iuc::AgentBatteryState>("battery", 1);
-  ros::Publisher  wpcheck_pub  = n.advertise<enif_iuc::AgentWaypointCheck>("waypoint_check", 1);
-  ros::Publisher  boxcheck_pub = n.advertise<enif_iuc::AgentWaypointCheck>("rotated_box_check", 1);
+  ros::Publisher  wpcheck_pub  = n.advertise<enif_iuc::AgentCheck>("waypoint_check", 1);
+  ros::Publisher  boxcheck_pub = n.advertise<enif_iuc::AgentCheck>("rotated_box_check", 1);
   ros::Publisher  agent_targetE_pub  = n.advertise<enif_iuc::AgentSource>("agent_targetE", 1);
+  ros::Publisher  sourcecheck_pub = n.advertise<enif_iuc::AgentCheck>("source_check", 1);
   
   ros::Subscriber sub_takeoff    = n.subscribe("takeoff_command",5,takeoff_callback);
   ros::Subscriber sub_wp         = n.subscribe("waypoint_list",5,wp_callback);
@@ -464,6 +466,10 @@ int main(int argc, char **argv)
 	  cout<<"What we think it should be"<<agent_source[response_number].source<<endl;
 	  cout<<"source check: "<<source_checked[response_number]<<endl;
 	  cout<<realTarget<<endl;
+	  sourcecheck_msg.agent_number = response_number;
+	  sourcecheck_msg.check.data = source_checked[response_number];
+	  sourcecheck_pub.publish(sourcecheck_msg);
+
 	  buf = buf+28;
 	  break;
 	}
