@@ -36,6 +36,7 @@
 #include "mps_driver/MPS.h"
 #include <string>
 #include <geographic_msgs/GeoPoint.h>
+#include "enif_iuc/AgentHome.h"
 
 using namespace std;
 
@@ -79,6 +80,7 @@ nav_msgs::Odometry local;
 
 geographic_msgs::GeoPoint targetE;
 geographic_msgs::GeoPoint realTarget;
+enif_iuc::AgentHome agent_home;
 
 //containers for enif_iuc_ground
 std::vector<geographic_msgs::GeoPoint> agentHomes;

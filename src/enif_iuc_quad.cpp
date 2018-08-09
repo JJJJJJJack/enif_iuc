@@ -241,7 +241,6 @@ int main(int argc, char **argv)
 
 	bool checksum_result = false;
 	enif_iuc::AgentMPS agent_mps;	
-	enif_iuc::AgentHome agent_home;
 	enif_iuc::AgentLocal agent_local;
 	
 	sensor_msgs::NavSatFix my_gps = gps;
@@ -281,23 +280,20 @@ int main(int argc, char **argv)
 
 	      if(checkValue(realTarget.latitude,-180,180) && checkValue(realTarget.longitude,-180,180)){
 		//publish the source position
-		realTarget_pub.publish(realTarget);
+	
 
 		//set the home location to be the same as the source location
 		agent_home.home.header.stamp = ros::Time::now();		
 		agent_home.home.geo.latitude = realTarget.latitude;
 		agent_home.home.geo.longitude = realTarget.longitude;
-		home_pub.publish(agent_home);
 	      }	  
 	      if(NEW_REALTARGET){
 		realTarget = my_realTarget;
 	      }
 	      int tempbuf_size = 28;
 	      char tempbuf[tempbuf_size];
-	      std::cout<<"before: "<<strlen(buf)<<std::endl;
 	      cut_buf(buf, tempbuf, tempbuf_size);
 	      buf+=tempbuf_size;
-	      std::cout<<"after: "<<strlen(buf)<<std::endl;
 	      tempbuf[1]=IntToChar(AGENT_NUMBER);
 	      string send_data(tempbuf);
 	      USBPORT.write(send_data);
@@ -307,6 +303,8 @@ int main(int argc, char **argv)
 	default:
 	  break;
 	}
+	realTarget_pub.publish(realTarget);
+	home_pub.publish(agent_home);
 	if(command_type==COMMAND_WAYPOINT || command_type==COMMAND_TAKEOFF || command_type==COMMAND_BOX)
 	  break;
       }
