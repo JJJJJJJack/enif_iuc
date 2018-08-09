@@ -57,6 +57,9 @@ using namespace std;
 #define GAS_PROPANE 1
 #define GAS_METHANE 2
 
+#define REMAP_A 0.5
+#define REMAP_B -990.0
+
 // transmit local and home info from quad
 bool sendLocal = false;
 bool sendBat   = false;
@@ -91,6 +94,24 @@ std_msgs::Bool takeoff_command;
 enif_iuc::WaypointTask waypoint_list;
 std_msgs::Float64MultiArray box;
 
+bool check_double(double number)
+{
+  unsigned char *chptr;
+  chptr = (unsigned char *) &number;
+  for(int i = 0; i<sizeof(double); i++){
+    if(*chptr == 0xd0 || *chptr == 0xda)
+      return true;// return true if we hit the hole
+    chptr++;
+  }
+  return false;
+}
+
+bool checkValue(double var, double min, double max)
+{
+  if(var>=min && var<=max)
+    return true;
+  return false;
+}
 
 int CharToInt(char a)
 {
@@ -105,12 +126,12 @@ char IntToChar(int a)
 void DoubleToChar(char* buf, double number)
 {
   unsigned char *chptr;
-  chptr = (unsigned char *) &number;
+  bool remap = check_double(number);
+  double remap_number = number;
+  if(remap == true)
+    remap_number = number*REMAP_A+REMAP_B;
+  chptr = (unsigned char *) &remap_number;
   for(int i = 0; i<sizeof(double); i++){
-    if(*chptr == 0xd0)
-      *chptr = 0xd1;
-    if(*chptr == 0xda)
-      *chptr = 0xdb;
     buf[i] = *chptr + '0';
     chptr++;
   }
@@ -134,6 +155,9 @@ void CharToDouble(char* buf, double &number)
     *chptr = buf[i] - '0';
     chptr++;
   }
+  if(checkValue(number, -180.0*REMAP_A+REMAP_B, 180.0*REMAP_A+REMAP_B)){
+    number = (number-REMAP_B)/REMAP_A;
+  }
 }
 
 void CharToFloat(char* buf, float &number)
@@ -144,13 +168,6 @@ void CharToFloat(char* buf, float &number)
     *chptr = buf[i] - '0';
     chptr++;
   }
-}
-
-bool checkValue(double var, double min, double max)
-{
-  if(var>=min && var<=max)
-    return true;
-  return false;
 }
 
 int get_target_number(char* buf)
