@@ -294,11 +294,14 @@ int main(int argc, char **argv)
 	      }
 	      int tempbuf_size = 28;
 	      char tempbuf[tempbuf_size];
+	      std::cout<<"before: "<<strlen(buf)<<std::endl;
 	      cut_buf(buf, tempbuf, tempbuf_size);
+	      buf+=tempbuf_size;
+	      std::cout<<"after: "<<strlen(buf)<<std::endl;
 	      tempbuf[1]=IntToChar(AGENT_NUMBER);
 	      string send_data(tempbuf);
 	      USBPORT.write(send_data);
-
+	      //std::cout<<"sendingData"<<std::endl;
 	    }
 	  break;	  
 	default:
@@ -325,6 +328,7 @@ int main(int argc, char **argv)
 	int tempbuf_size = get_waypointlist_buf_size(waypoint_number)+1;
 	char tempbuf[tempbuf_size];
 	cut_buf(buf, tempbuf, tempbuf_size);
+	buf+=tempbuf_size;
 	string send_data(tempbuf);
 	USBPORT.write(send_data);
 	buf += tempbuf_size;
@@ -339,6 +343,7 @@ int main(int argc, char **argv)
 	int tempbuf_size = 50;
 	char tempbuf[tempbuf_size];
 	cut_buf(buf, tempbuf, tempbuf_size);
+	buf+=tempbuf_size;
 	string send_data(tempbuf);
 	USBPORT.write(send_data);
 	break;
@@ -355,6 +360,7 @@ int main(int argc, char **argv)
 	int tempbuf_size = 5;
 	char tempbuf[tempbuf_size];
 	cut_buf(buf, tempbuf, tempbuf_size);
+	buf+=tempbuf_size;
 	string send_data(tempbuf);
 	USBPORT.write(send_data);
 	break;
@@ -407,7 +413,7 @@ int main(int argc, char **argv)
 	    form_checksum(send_buf);	    
 	    string send_data(send_buf);	    
 	    USBPORT.write(send_data);
-	    NEW_TARGETE = false;
+	    NEW_TARGETE = false;	    
 	  }
 	  break;
 	default:

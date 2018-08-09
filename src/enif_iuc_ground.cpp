@@ -42,6 +42,13 @@ bool check_source(geographic_msgs::GeoPoint sendsource, geographic_msgs::GeoPoin
   return true;
 }
 
+bool check_return_source(geographic_msgs::GeoPoint sendsource, geographic_msgs::GeoPoint responsesource)
+{
+  if(fabs(sendsource.latitude - responsesource.latitude)>1E-04 || fabs(sendsource.longitude != responsesource.longitude)>1E-04)
+    return false;
+  return true;
+}
+
 
 bool check_waypoints(enif_iuc::WaypointTask sendwp, enif_iuc::WaypointTask responsewp)
 {
@@ -450,7 +457,7 @@ int main(int argc, char **argv)
 	  //only verifies response from the agent
 	  response_number = get_target_number(buf);
 	  get_realTarget(buf);
-	  source_checked[response_number]= check_source(agent_source[response_number].source, realTarget);
+	  source_checked[response_number]= check_return_source(agent_source[response_number].source, realTarget);
 	  cout<<"source check: "<<source_checked[response_number]<<endl;
 	  cout<<realTarget<<endl;
 	  buf = buf+28;

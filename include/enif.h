@@ -243,7 +243,7 @@ void cut_buf(char* buf_0, char* buf_1, int size)
   //  buf_1 = tbuf;
   strncpy(buf_1, buf_0, size-1);
   buf_1[size-1] = 0x0A;
-  buf_0 += size;
+  //buf_0 += size;
 }
 
 int get_waypointlist_buf_size(int waypoint_number)
