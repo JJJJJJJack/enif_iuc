@@ -76,11 +76,11 @@ void form_mps(char* buf)
   buf[3] = IntToChar(GAS_ID);
   FloatToChar(buf+4, mps.percentLEL);
   FloatToChar(buf+4+4, mps.temperature);
-  FloatToChar(buf+4+8, mps.pressure);
+  FloatToChar(buf+4+8, height.range);
   FloatToChar(buf+4+12, mps.humidity);
   DoubleToChar(buf+4+16, gps.latitude);
   DoubleToChar(buf+4+24, gps.longitude);
-  DoubleToChar(buf+4+32, height.range);
+  DoubleToChar(buf+4+32, gps.altitude);
   buf[4+40] = 0x0A;
   // Clear the percentLEL to make sure we don't pub wrong data when we get new GPS
   clearmps();
@@ -267,14 +267,14 @@ int main(int argc, char **argv)
 	      checksum_result = checksum(buf);
 	      get_realTarget(buf);
 
-	      if(checkValue(realTarget.latitude,-180,180) && checkValue(realTarget.longitude,-180,180)){
+	      if(checkValue(realTarget.latitude,-180,180) && checkValue(realTarget.longitude,-180,180) && checkValue(realTarget.altitude,0,2000)){
 		//publish the source position
 	
-
 		//set the home location to be the same as the source location
 		agent_home.home.header.stamp = ros::Time::now();		
 		agent_home.home.geo.latitude = realTarget.latitude;
 		agent_home.home.geo.longitude = realTarget.longitude;
+		agent_home.home.geo.altitude = realTarget.altitude;
 		NEW_REALTARGET = true;
 	      }
 	      int tempbuf_size = 28;

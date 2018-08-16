@@ -75,7 +75,7 @@ int GAS_ID = 0;
 std_msgs::UInt8 state;
 sensor_msgs::NavSatFix gps;
 mps_driver::MPS mps, mps_other;
-sensor_msgs::Range height;
+sensor_msgs::Range height,height_other;
 sensor_msgs::BatteryState battery;
 
 mavros_msgs::HomePosition home;
@@ -306,7 +306,7 @@ bool extract_GPS_from_MPS(mps_driver::MPS mps_read)
 {
   if(checkValue(mps_read.GPS_latitude, -180, 180) &&
      checkValue(mps_read.GPS_longitude, -180, 180) &&
-     checkValue(mps_read.GPS_altitude, 0, 40)){
+     checkValue(mps_read.GPS_altitude, 0, 2000)){
     gps.latitude = mps_read.GPS_latitude;
     gps.longitude = mps_read.GPS_longitude;
     height.range = mps_read.GPS_altitude;
@@ -321,7 +321,7 @@ bool check_MPS(mps_driver::MPS mps_read)
 {
   if(checkValue(mps_read.GPS_latitude, -180, 180) &&
      checkValue(mps_read.GPS_longitude, -180, 180) &&
-     checkValue(mps_read.GPS_altitude, 0, 40)){
+     checkValue(mps_read.GPS_altitude, 0, 2000)){
     return true;
   }else{
     cout<<mps_read.GPS_latitude<<" "<<mps_read.GPS_longitude<<" "<<mps_read.GPS_altitude<<endl;
@@ -346,7 +346,7 @@ bool checkHome(mavros_msgs::HomePosition myhome)
   /* bool checkValue(double var, double min, double max) */
   if (checkValue(myhome.geo.latitude, -180, 180)  &&
       checkValue(myhome.geo.longitude, -180, 180) &&
-      checkValue(myhome.geo.altitude, 0, 1500) &&
+      checkValue(myhome.geo.altitude, 0, 2000) &&
       (fabs(myhome.geo.latitude) + fabs(myhome.geo.longitude) + fabs(myhome.geo.altitude)) > 1 &&
       (fabs(myhome.geo.latitude) + fabs(myhome.geo.longitude) + fabs(myhome.geo.altitude)) < 1000000)
     {
@@ -380,22 +380,22 @@ void get_mps(char* buf)
     string str = "None";
     mps.gasID = str;
   }
-  float percentLEL, temperature, pressure, humidity;
-  double GPS_latitude, GPS_longitude, local_height;
+  float percentLEL, temperature, local_height, humidity;
+  double GPS_latitude, GPS_longitude, GPS_altitude;
   CharToFloat(buf+4, percentLEL);
   mps.percentLEL = percentLEL;
   CharToFloat(buf+4+4, temperature);
   mps.temperature = temperature;
-  CharToFloat(buf+4+8, pressure);
-  mps.pressure = pressure;
+  CharToFloat(buf+4+8, local_height);
+  mps.local_z = local_height;
   CharToFloat(buf+4+12, humidity);
   mps.humidity = humidity;
   CharToDouble(buf+4+16, GPS_latitude);
   mps.GPS_latitude = GPS_latitude;
   CharToDouble(buf+4+24, GPS_longitude);
   mps.GPS_longitude = GPS_longitude;
-  CharToDouble(buf+4+32, local_height);
-  mps.GPS_altitude = local_height;
+  CharToDouble(buf+4+32, GPS_altitude);
+  mps.GPS_altitude = GPS_altitude;
   buf = buf + 44;
   
 }
@@ -413,22 +413,22 @@ void get_other_mps(char* buf)
     string str = "None";
     mps_other.gasID = str;
   }
-  float percentLEL, temperature, pressure, humidity;
-  double GPS_latitude, GPS_longitude, local_height;
+  float percentLEL, temperature, local_height, humidity;
+  double GPS_latitude, GPS_longitude, GPS_altitude;
   CharToFloat(buf+4, percentLEL);
   mps_other.percentLEL = percentLEL;
   CharToFloat(buf+4+4, temperature);
   mps_other.temperature = temperature;
-  CharToFloat(buf+4+8, pressure);
-  mps_other.pressure = pressure;
+  CharToFloat(buf+4+8, local_height);
+  mps_other.local_z = local_height;
   CharToFloat(buf+4+12, humidity);
   mps_other.humidity = humidity;
   CharToDouble(buf+4+16, GPS_latitude);
   mps_other.GPS_latitude = GPS_latitude;
   CharToDouble(buf+4+24, GPS_longitude);
   mps_other.GPS_longitude = GPS_longitude;
-  CharToDouble(buf+4+32, local_height);
-  mps_other.GPS_altitude = local_height;
+  CharToDouble(buf+4+32, GPS_altitude);
+  mps_other.GPS_altitude = GPS_altitude;
   buf = buf + 44;
   
 }

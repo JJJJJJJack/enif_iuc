@@ -38,16 +38,21 @@ bool check_takeoff(std_msgs::Bool sendtakeoff, std_msgs::Bool responsetakeoff)
 
 bool check_source(geographic_msgs::GeoPoint sendsource, geographic_msgs::GeoPoint responsesource)
 {
-  if(sendsource.latitude != responsesource.latitude || sendsource.longitude != responsesource.longitude)
+  if(sendsource.latitude != responsesource.latitude || sendsource.longitude != responsesource.longitude || sendsource.altitude != responsesource.altitude){
+    cout<<sendsource.latitude - responsesource.latitude<<endl;
+    cout<<sendsource.longitude - responsesource.longitude<<endl;
+    cout<<sendsource.altitude - responsesource.altitude<<endl;
     return false;
+  }
   return true;
 }
 
 bool check_return_source(geographic_msgs::GeoPoint sendsource, geographic_msgs::GeoPoint responsesource)
 {
-  if(fabs(sendsource.latitude - responsesource.latitude)>1e-04 || fabs(sendsource.longitude - responsesource.longitude)>1e-04){
+  if(fabs(sendsource.latitude - responsesource.latitude)>1e-04 || fabs(sendsource.longitude - responsesource.longitude)>1e-04 || fabs(sendsource.altitude - responsesource.altitude)>1e-04){
     cout<<sendsource.latitude - responsesource.latitude<<endl;
     cout<<sendsource.longitude - responsesource.longitude<<endl;
+    cout<<sendsource.altitude - responsesource.altitude<<endl;
     return false;
   }
   return true;
