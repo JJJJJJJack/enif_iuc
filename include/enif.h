@@ -309,6 +309,8 @@ bool extract_GPS_from_MPS(mps_driver::MPS mps_read)
      checkValue(mps_read.GPS_altitude, 0, 2000)){
     gps.latitude = mps_read.GPS_latitude;
     gps.longitude = mps_read.GPS_longitude;
+    gps.altitude = mps_read.GPS_altitude;
+    
     height.range = mps_read.GPS_altitude;
     return true;
   }else{
