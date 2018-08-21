@@ -31,6 +31,7 @@
 #include "sensor_msgs/Range.h"
 #include "sensor_msgs/BatteryState.h"
 #include "std_msgs/Float64MultiArray.h"
+#include "std_msgs/Int8.h"
 #include "enif_iuc/Waypoint.h"
 #include "enif_iuc/WaypointTask.h"
 #include "mps_driver/MPS.h"
@@ -91,6 +92,7 @@ std::vector<int> agentID;
 geographic_msgs::GeoPoint averageHome;
 
 std_msgs::Bool takeoff_command;
+std_msgs::Int8 alg;
 enif_iuc::WaypointTask waypoint_list;
 std_msgs::Float64MultiArray box;
 
@@ -208,10 +210,13 @@ void form_checksum(char* buf)
 std_msgs::Bool get_takeoff_command(char* buf)
 {
   std_msgs::Bool result;
-  if(CharToInt(buf[3]) == 0)
-    result.data = false ;
-  else
+  int takeoff_alg = CharToInt(buf[3]);
+  if(takeoff_alg >= 100)
     result.data = true;
+  else
+    result.data = false;
+  alg.data = takeoff_alg - result.data*100;
+      
   return result;
 }
 

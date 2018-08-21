@@ -334,6 +334,21 @@ int main(int argc, char **argv)
       }
       case COMMAND_TAKEOFF:{
 	std_msgs::Bool cmd = get_takeoff_command(buf);
+
+	switch (alg.data) {
+	case 1 :	  
+	  n.setParam("/runAlg", "lawnMower");
+	  break;
+	case 2 :
+	  n.setParam("/runAlg", "PSO");
+	  break;
+	case 3 :
+	  n.setParam("/runAlg", "PF");
+	  break;
+	default :
+	  n.setParam("/runAlg", "lawnMower");
+	}
+
 	takeoff_command.data = cmd.data;
 	if(takeoff_command.data == true)
 	  cout<< " Takeoff"<<endl;
