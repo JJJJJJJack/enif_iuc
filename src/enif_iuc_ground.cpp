@@ -36,6 +36,14 @@ bool check_takeoff(std_msgs::Bool sendtakeoff, std_msgs::Bool responsetakeoff)
   return true;
 }
 
+bool check_alg(std_msgs::Int8 sendAlg, std_msgs::Int8 responseAlg)
+{
+  bool result = false;
+  if(sendAlg.data != responseAlg.data)
+    return false;
+  return true;
+}
+
 bool check_source(geographic_msgs::GeoPoint sendsource, geographic_msgs::GeoPoint responsesource)
 {
   if(sendsource.latitude != responsesource.latitude || sendsource.longitude != responsesource.longitude || sendsource.altitude != responsesource.altitude){
@@ -138,6 +146,16 @@ bool check_return_box(std_msgs::Float64MultiArray sendbox, std_msgs::Float64Mult
   return true;
 }
 
+void alg_callback(const std_msgs::Int8 &new_message)
+{
+  bool check_result = check_alg(new_message, alg);
+  if(check_result == false)
+    for(int i = 0; i < 256; i++){
+      takeoff_checked[i] = false;
+    }
+  alg = new_message;
+}
+
 void takeoff_callback(const enif_iuc::AgentTakeoff &new_message)
 {
   agent_number_takeoff = new_message.agent_number;
@@ -225,7 +243,7 @@ void form_takeoff(char* buf, int agent_number, std_msgs::Bool takeoff)
 {
   buf[1] = IntToChar(agent_number);
   buf[2] = IntToChar(COMMAND_TAKEOFF);
-  buf[3] = IntToChar(takeoff.data);
+  buf[3] = IntToChar(takeoff.data*100 + alg.data);
   buf[4] = 0x0A;
 }
 
@@ -350,6 +368,7 @@ int main(int argc, char **argv)
       enif_iuc::AgentMPS agent_mps;
       enif_iuc::AgentState agent_state;
       enif_iuc::AgentBatteryState agent_battery;
+      std_msgs::Int8 response_alg;
       
       bool checksum_result = false;
       switch(command_type){
@@ -446,8 +465,8 @@ int main(int argc, char **argv)
       case COMMAND_TAKEOFF:
 	//only verifies response from the agent
 	response_number = get_target_number(buf);
-	takeoff_command = get_takeoff_command(buf);
-	takeoff_checked[response_number] = check_takeoff(agent_takeoff[response_number].takeoff_command, takeoff_command);
+	takeoff_command = get_takeoff_command(buf, response_alg);
+	takeoff_checked[response_number] = check_takeoff(agent_takeoff[response_number].takeoff_command, takeoff_command) && check_alg(alg, response_alg);
 	cout<<"Takeoff check: "<<takeoff_checked[response_number]<<endl;
 	cout<<takeoff_command<<endl;
 	buf = buf+5;
