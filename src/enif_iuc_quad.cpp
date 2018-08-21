@@ -333,7 +333,7 @@ int main(int argc, char **argv)
 
       }
       case COMMAND_TAKEOFF:{
-	std_msgs::Bool cmd = get_takeoff_command(buf);
+	std_msgs::Bool cmd = get_takeoff_command(buf, alg);
 
 	switch (alg.data) {
 	case 1 :	  

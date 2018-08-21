@@ -207,15 +207,15 @@ void form_checksum(char* buf)
   buf[0] = sum;
 }
 
-std_msgs::Bool get_takeoff_command(char* buf)
+std_msgs::Bool get_takeoff_command(char* buf, std_msgs::Int8 &newAlg)
 {
   std_msgs::Bool result;
-  int takeoff_alg = CharToInt(buf[3]);
-  if(takeoff_alg >= 100)
+  int takeoff_newAlg = CharToInt(buf[3]);
+  if(takeoff_newAlg >= 100)
     result.data = true;
   else
     result.data = false;
-  alg.data = takeoff_alg - result.data*100;
+  newAlg.data = takeoff_newAlg - result.data*100;
       
   return result;
 }
