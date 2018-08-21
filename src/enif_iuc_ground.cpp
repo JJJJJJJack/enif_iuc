@@ -518,7 +518,7 @@ int main(int argc, char **argv)
 	    {
 	      form_takeoff(send_buf, agent_number_takeoff, agent_takeoff[agent_number_takeoff].takeoff_command);
 	      form_checksum(send_buf);
-	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
+	      string send_data(send_buf);
 	      USBPORT.write(send_data);
 	      cout<<"Send takoff command to agent "<<agent_number_takeoff<<endl;
 	    }
@@ -529,8 +529,7 @@ int main(int argc, char **argv)
 	    {
 	      form_box(send_buf, agent_box[agent_number_box].agent_number, agent_box[agent_number_box].box);
 	      form_checksum(send_buf);
-	      //string send_data(send_buf);
-	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
+	      string send_data(send_buf);
 	      USBPORT.write(send_data);
 	      cout<<"send box to agent "<<agent_number_box<<endl;
 	      cout<<agent_box[agent_number_box].box<<endl;
@@ -540,7 +539,7 @@ int main(int argc, char **argv)
 	      form_waypoint_info(send_buf, agent_wp[agent_number_wp].agent_number, agent_wp[agent_number_wp].waypoint_list.mission_waypoint.size(), agent_wp[agent_number_wp].waypoint_list);
 	      form_waypoints(send_buf, agent_wp[agent_number_wp].waypoint_list.mission_waypoint.size(), agent_wp[agent_number_wp].waypoint_list);
 	      form_checksum(send_buf);
-	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
+	      string send_data(send_buf);
 	      USBPORT.write(send_data);
 	      cout<<"send waypoint to agent "<<agent_number_wp<<endl;
 	    }
@@ -550,7 +549,7 @@ int main(int argc, char **argv)
 	    {
 	      form_realTarget(send_buf, 100, agent_source[agent_number_source].source); // broadcast
 	      form_checksum(send_buf);
-	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
+	      string send_data(send_buf);
 	      USBPORT.write(send_data);
 	      cout<<"Send source command to agent "<<agent_number_source<<endl;
 	    }
