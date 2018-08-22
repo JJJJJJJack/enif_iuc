@@ -38,6 +38,7 @@
 #include <string>
 #include <geographic_msgs/GeoPoint.h>
 #include "enif_iuc/AgentHome.h"
+#include "enif_iuc/AgentSource.h"
 
 using namespace std;
 
@@ -83,7 +84,7 @@ mavros_msgs::HomePosition home;
 nav_msgs::Odometry local;
 
 geographic_msgs::GeoPoint targetE;
-geographic_msgs::GeoPoint realTarget;
+enif_iuc::AgentSource realTarget;
 enif_iuc::AgentHome agent_home;
 
 //containers for enif_iuc_ground
@@ -440,45 +441,6 @@ void get_other_mps(char* buf)
   
 }
 
-void get_local(char* buf)
-{
-  double pX, pY, pZ, oX, oY, oZ, oW;
-  
-  CharToDouble(buf+3, pX);  
-  CharToDouble(buf+11, pY);  
-  CharToDouble(buf+19, pZ);
-  CharToDouble(buf+27, oX);  
-  CharToDouble(buf+35, oY);
-  CharToDouble(buf+43, oZ);  
-  CharToDouble(buf+51, oW);
-
-  local.pose.pose.position.x    = pX;
-  local.pose.pose.position.y    = pY;
-  local.pose.pose.position.z    = pZ;  
-  local.pose.pose.orientation.x = oX;
-  local.pose.pose.orientation.y = oY;
-  local.pose.pose.orientation.z = oZ;
-  local.pose.pose.orientation.w = oW;
-  buf = buf + 59;
-}
-
-
-
-void get_home(char* buf)
-{
-  double latitude, longitude, altitude;
-  
-  CharToDouble(buf+3, latitude);
-  CharToDouble(buf+11, longitude);
-  CharToDouble(buf+19, altitude);
-  
-  home.geo.latitude = latitude;
-  home.geo.longitude = longitude;  
-  home.geo.altitude = altitude;
-  buf = buf + 28;
-}
-
-
 void get_targetE(char* buf)
 {
   double latitude, longitude, altitude;
@@ -495,16 +457,27 @@ void get_targetE(char* buf)
 
 void get_realTarget(char* buf)
 {
-  double latitude, longitude, altitude;
-  
+  double latitude, longitude, altitude, angle, wind_speed;
+  float diff_y, diff_z, release_rate;
   CharToDouble(buf+3, latitude);
   CharToDouble(buf+11, longitude);
   CharToDouble(buf+19, altitude);
+  angle = CharToInt(buf[27]);
+  wind_speed = CharToInt(buf[28]);
+  CharToFloat(buf+29, diff_y);
+  CharToFloat(buf+33, diff_z);
+  CharToFloat(buf+37, release_rate);
   
-  realTarget.latitude = latitude;
-  realTarget.longitude = longitude;  
-  realTarget.altitude = altitude;
-  buf = buf + 28;
+  realTarget.source.latitude = latitude;
+  realTarget.source.longitude = longitude;  
+  realTarget.source.altitude = altitude;
+  realTarget.angle = angle;
+  realTarget.wind_speed = wind_speed;
+  realTarget.diff_y = diff_y;
+  realTarget.diff_z = diff_z;
+  realTarget.release_rate = release_rate;
+  
+  buf = buf + 41;
 }
 
 

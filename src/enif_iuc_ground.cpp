@@ -44,23 +44,23 @@ bool check_alg(std_msgs::Int8 sendAlg, std_msgs::Int8 responseAlg)
   return true;
 }
 
-bool check_source(geographic_msgs::GeoPoint sendsource, geographic_msgs::GeoPoint responsesource)
+bool check_source(enif_iuc::AgentSource sendsource, enif_iuc::AgentSource responsesource)
 {
-  if(sendsource.latitude != responsesource.latitude || sendsource.longitude != responsesource.longitude || sendsource.altitude != responsesource.altitude){
-    cout<<sendsource.latitude - responsesource.latitude<<endl;
-    cout<<sendsource.longitude - responsesource.longitude<<endl;
-    cout<<sendsource.altitude - responsesource.altitude<<endl;
+  if(sendsource.source.latitude != responsesource.source.latitude || sendsource.source.longitude != responsesource.source.longitude || sendsource.source.altitude != responsesource.source.altitude || sendsource.angle != responsesource.angle || sendsource.diff_y != responsesource.diff_y || sendsource.release_rate != responsesource.release_rate){
+    cout<<sendsource.source.latitude - responsesource.source.latitude<<endl;
+    cout<<sendsource.source.longitude - responsesource.source.longitude<<endl;
+    cout<<sendsource.source.altitude - responsesource.source.altitude<<endl;
     return false;
   }
   return true;
 }
 
-bool check_return_source(geographic_msgs::GeoPoint sendsource, geographic_msgs::GeoPoint responsesource)
+bool check_return_source(enif_iuc::AgentSource sendsource, enif_iuc::AgentSource responsesource)
 {
-  if(fabs(sendsource.latitude - responsesource.latitude)>1e-04 || fabs(sendsource.longitude - responsesource.longitude)>1e-04 || fabs(sendsource.altitude - responsesource.altitude)>1e-04){
-    cout<<sendsource.latitude - responsesource.latitude<<endl;
-    cout<<sendsource.longitude - responsesource.longitude<<endl;
-    cout<<sendsource.altitude - responsesource.altitude<<endl;
+  if(fabs(sendsource.source.latitude - responsesource.source.latitude)>1e-04 || fabs(sendsource.source.longitude - responsesource.source.longitude)>1e-04 || fabs(sendsource.source.altitude - responsesource.source.altitude)>1e-04 || fabs(sendsource.angle - responsesource.angle)>1e-04 || fabs(sendsource.diff_y - responsesource.diff_y)>1e-04 || fabs(sendsource.release_rate - responsesource.release_rate)>1e-04){
+    cout<<sendsource.source.latitude - responsesource.source.latitude<<endl;
+    cout<<sendsource.source.longitude - responsesource.source.longitude<<endl;
+    cout<<sendsource.source.altitude - responsesource.source.altitude<<endl;
     return false;
   }
   return true;
@@ -181,7 +181,7 @@ void wp_callback(const enif_iuc::AgentWaypointTask &new_message)
 void realTarget_callback(const enif_iuc::AgentSource &new_message){
 
   agent_number_source = new_message.agent_number;  
-  bool check_result = check_source(new_message.source,agent_source[agent_number_source].source);
+  bool check_result = check_source(new_message,agent_source[agent_number_source]);
 
   if (check_result==false){// overwrite when new source coming in
     agent_source[agent_number_source] = new_message;
@@ -229,14 +229,19 @@ void get_battery(char* buf)
   battery.header.stamp = ros::Time::now();
 }
 
-void form_realTarget(char* buf, int agent_number, geographic_msgs::GeoPoint sendSource)
+ void form_realTarget(char* buf, int agent_number, enif_iuc::AgentSource sendSource)
 {
   buf[1] = IntToChar(agent_number);
   buf[2] = IntToChar(COMMAND_REALTARGET);  
-  DoubleToChar(buf+3, sendSource.latitude);
-  DoubleToChar(buf+3+8, sendSource.longitude);
-  DoubleToChar(buf+3+8+8, sendSource.altitude);
-  buf[3+8+8+8] = 0x0A;
+  DoubleToChar(buf+3, sendSource.source.latitude);
+  DoubleToChar(buf+3+8, sendSource.source.longitude);
+  DoubleToChar(buf+3+8+8, sendSource.source.altitude);
+  buf[27] = IntToChar(sendSource.angle);
+  buf[28] = IntToChar(sendSource.wind_speed);
+  FloatToChar(buf+29, sendSource.diff_y);
+  FloatToChar(buf+33,sendSource.diff_z);
+  FloatToChar(buf+37,sendSource.release_rate);
+  buf[41] = 0x0A;
 }
 
 void form_takeoff(char* buf, int agent_number, std_msgs::Bool takeoff)
@@ -486,7 +491,7 @@ int main(int argc, char **argv)
 	  //only verifies response from the agent
 	  response_number = get_target_number(buf);
 	  get_realTarget(buf);
-	  source_checked[response_number]= check_return_source(agent_source[response_number].source, realTarget);
+	  source_checked[response_number]= check_return_source(agent_source[response_number], realTarget);
 	  cout<<"What we think it should be"<<agent_source[response_number].source<<endl;
 	  cout<<"source check: "<<source_checked[response_number]<<endl;
 	  cout<<realTarget<<endl;
@@ -544,7 +549,7 @@ int main(int argc, char **argv)
 	case 2:
 	  if(source_checked[agent_number_source] == false && agent_number_source > 0)
 	    {
-	      form_realTarget(send_buf, 100, agent_source[agent_number_source].source); // broadcast
+	      form_realTarget(send_buf, 100, agent_source[agent_number_source]); // broadcast
 	      form_checksum(send_buf);
 	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
 	      USBPORT.write(send_data);

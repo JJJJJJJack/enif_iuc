@@ -162,7 +162,7 @@ int main(int argc, char **argv)
   
   ros::Publisher  home_pub    = n.advertise<enif_iuc::AgentHome>("agent_home_data", 1);
   ros::Publisher  local_pub   = n.advertise<enif_iuc::AgentLocal>("agent_local_data", 1);
-  ros::Publisher  realTarget_pub  = n.advertise<geographic_msgs::GeoPoint>("agent_source_data", 1);
+  ros::Publisher  realTarget_pub  = n.advertise<enif_iuc::AgentSource>("agent_source_data", 1);
   
   // Subscribe topics from onboard ROS and transmit it through Xbee
   ros::Subscriber sub_state   = n.subscribe("agentState",1,state_callback);
@@ -238,8 +238,6 @@ int main(int argc, char **argv)
 	mavros_msgs::HomePosition my_home;
 	nav_msgs::Odometry my_local = local;
 
-	geographic_msgs::GeoPoint my_realTarget = realTarget;
-	
 	switch(command_type){
 	case COMMAND_MPS:
 	  //form mps and publish
@@ -267,17 +265,17 @@ int main(int argc, char **argv)
 	      checksum_result = checksum(buf);
 	      get_realTarget(buf);
 
-	      if(checkValue(realTarget.latitude,-180,180) && checkValue(realTarget.longitude,-180,180) && checkValue(realTarget.altitude,0,2000)){
+	      if(checkValue(realTarget.source.latitude,-180,180) && checkValue(realTarget.source.longitude,-180,180) && checkValue(realTarget.source.altitude,0,2000)){
 		//publish the source position
 	
 		//set the home location to be the same as the source location
 		agent_home.home.header.stamp = ros::Time::now();		
-		agent_home.home.geo.latitude = realTarget.latitude;
-		agent_home.home.geo.longitude = realTarget.longitude;
-		agent_home.home.geo.altitude = realTarget.altitude;
+		agent_home.home.geo.latitude = realTarget.source.latitude;
+		agent_home.home.geo.longitude = realTarget.source.longitude;
+		agent_home.home.geo.altitude = realTarget.source.altitude;
 		NEW_REALTARGET = true;
 	      }
-	      int tempbuf_size = 28;
+	      int tempbuf_size = 42;
 	      char tempbuf[tempbuf_size];
 	      cut_buf(buf, tempbuf, tempbuf_size);
 	      buf+=tempbuf_size;
