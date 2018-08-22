@@ -150,8 +150,10 @@ void alg_callback(const std_msgs::Int8 &new_message)
 {
   bool check_result = check_alg(new_message, alg);
   if(check_result == false)
-    for(int i = 0; i < 256; i++){
-      takeoff_checked[i] = false;
+    {
+      for(int i = 0; i < 256; i++){
+	takeoff_checked[i] = false;
+      }
     }
   alg = new_message;
 }
@@ -328,6 +330,8 @@ int main(int argc, char **argv)
   ros::Subscriber sub_wp         = n.subscribe("waypoint_list",5,wp_callback);
   ros::Subscriber sub_box        = n.subscribe("rotated_box",1,box_callback);
   ros::Subscriber sub_realTarget = n.subscribe("source",1,realTarget_callback);
+  ros::Subscriber sub_planningalgorithm = n.subscribe("planning_algorithm",1, alg_callback);
+   
   
   ros::Rate loop_rate(100);
 
@@ -358,7 +362,7 @@ int main(int argc, char **argv)
     // Get command type
     int command_type = get_command_type(buf);
     int c=0;
-    while(buf[0]!='\0' && (command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_STATE || command_type==COMMAND_WAYPOINT || command_type==COMMAND_BOX || command_type==COMMAND_TARGETE || command_type==COMMAND_REALTARGET)){
+    while(buf[0]!='\0' && (command_type == COMMAND_TAKEOFF || command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_STATE || command_type==COMMAND_WAYPOINT || command_type==COMMAND_BOX || command_type==COMMAND_TARGETE || command_type==COMMAND_REALTARGET)){
       //cout<<strlen(buf)<<endl;
     // Get the target number first
     int target_number = get_target_number(buf);
@@ -517,11 +521,11 @@ int main(int argc, char **argv)
 	case 0:
 	  if(takeoff_checked[agent_number_takeoff] == false && agent_number_takeoff > 0)
 	    {
-	      form_takeoff(send_buf, agent_takeoff[agent_number_takeoff].agent_number, agent_takeoff[agent_number_takeoff].takeoff_command);
+	      form_takeoff(send_buf, agent_number_takeoff, agent_takeoff[agent_number_takeoff].takeoff_command);
 	      form_checksum(send_buf);
-	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
+	      string send_data(send_buf);
 	      USBPORT.write(send_data);
-	      cout<<"Send takeoff command to agent "<<agent_number_takeoff<<endl;
+	      cout<<"Send takoff command to agent "<<agent_number_takeoff<<endl;
 	    }
 	  break;
 	case 1:
@@ -530,8 +534,7 @@ int main(int argc, char **argv)
 	    {
 	      form_box(send_buf, agent_box[agent_number_box].agent_number, agent_box[agent_number_box].box);
 	      form_checksum(send_buf);
-	      //string send_data(send_buf);
-	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
+	      string send_data(send_buf);
 	      USBPORT.write(send_data);
 	      cout<<"send box to agent "<<agent_number_box<<endl;
 	      cout<<agent_box[agent_number_box].box<<endl;
@@ -541,7 +544,7 @@ int main(int argc, char **argv)
 	      form_waypoint_info(send_buf, agent_wp[agent_number_wp].agent_number, agent_wp[agent_number_wp].waypoint_list.mission_waypoint.size(), agent_wp[agent_number_wp].waypoint_list);
 	      form_waypoints(send_buf, agent_wp[agent_number_wp].waypoint_list.mission_waypoint.size(), agent_wp[agent_number_wp].waypoint_list);
 	      form_checksum(send_buf);
-	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
+	      string send_data(send_buf);
 	      USBPORT.write(send_data);
 	      cout<<"send waypoint to agent "<<agent_number_wp<<endl;
 	    }
@@ -551,7 +554,7 @@ int main(int argc, char **argv)
 	    {
 	      form_realTarget(send_buf, 100, agent_source[agent_number_source]); // broadcast
 	      form_checksum(send_buf);
-	      std::vector<uint8_t> send_data(send_buf, send_buf+256);
+	      string send_data(send_buf);
 	      USBPORT.write(send_data);
 	      cout<<"Send source command to agent "<<agent_number_source<<endl;
 	    }
