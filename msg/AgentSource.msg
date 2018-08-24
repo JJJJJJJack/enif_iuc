@@ -1,6 +1,6 @@
 uint8 agent_number
 geographic_msgs/GeoPoint source
-int8 angle
+float32 angle
 uint8 wind_speed
 float32 diff_y
 float32 diff_z

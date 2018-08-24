@@ -238,12 +238,12 @@ void get_battery(char* buf)
   DoubleToChar(buf+3, sendSource.source.latitude);
   DoubleToChar(buf+3+8, sendSource.source.longitude);
   DoubleToChar(buf+3+8+8, sendSource.source.altitude);
-  buf[27] = IntToChar(sendSource.angle);
-  buf[28] = IntToChar(sendSource.wind_speed);
-  FloatToChar(buf+29, sendSource.diff_y);
-  FloatToChar(buf+33,sendSource.diff_z);
-  FloatToChar(buf+37,sendSource.release_rate);
-  buf[41] = 0x0A;
+  FloatToChar(buf+27, sendSource.angle);
+  buf[31] = IntToChar(sendSource.wind_speed);
+  FloatToChar(buf+32, sendSource.diff_y);
+  FloatToChar(buf+36,sendSource.diff_z);
+  FloatToChar(buf+40,sendSource.release_rate);
+  buf[44] = 0x0A;
 }
 
 void form_takeoff(char* buf, int agent_number, std_msgs::Bool takeoff)

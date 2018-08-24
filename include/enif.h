@@ -457,16 +457,17 @@ void get_targetE(char* buf)
 
 void get_realTarget(char* buf)
 {
-  double latitude, longitude, altitude, angle, wind_speed;
-  float diff_y, diff_z, release_rate;
+  double latitude, longitude, altitude, wind_speed;
+  float angle, diff_y, diff_z, release_rate;
   CharToDouble(buf+3, latitude);
   CharToDouble(buf+11, longitude);
   CharToDouble(buf+19, altitude);
-  angle = CharToInt(buf[27]);
-  wind_speed = CharToInt(buf[28]);
-  CharToFloat(buf+29, diff_y);
-  CharToFloat(buf+33, diff_z);
-  CharToFloat(buf+37, release_rate);
+  CharToFloat(buf+27, angle);
+
+  wind_speed = CharToInt(buf[31]);
+  CharToFloat(buf+32, diff_y);
+  CharToFloat(buf+36, diff_z);
+  CharToFloat(buf+40, release_rate);
   
   realTarget.source.latitude = latitude;
   realTarget.source.longitude = longitude;  
@@ -477,7 +478,7 @@ void get_realTarget(char* buf)
   realTarget.diff_z = diff_z;
   realTarget.release_rate = release_rate;
   
-  buf = buf + 41;
+  buf = buf + 44;
 }
 
 

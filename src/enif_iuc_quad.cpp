@@ -11,7 +11,7 @@
 #include "enif_iuc/AgentHome.h"
 #include "enif_iuc/AgentLocal.h"
 
-bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false, NEW_HOME = false, NEW_LOCAL = false, NEW_TARGETE=false, NEW_REALTARGET=false;
+bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false, NEW_HOME = false, NEW_LOCAL = false, NEW_TARGETE=false, NEW_REALTARGET=false, NEW_BOX=false;
 
 using namespace std;
 
@@ -321,6 +321,7 @@ int main(int argc, char **argv)
 	get_box(buf, box);
 	checksum_result = checksum(buf);
 	cout<<box<<endl;
+	NEW_BOX = true;
 	int tempbuf_size = 50;
 	char tempbuf[tempbuf_size];
 	cut_buf(buf, tempbuf, tempbuf_size);
@@ -328,7 +329,6 @@ int main(int argc, char **argv)
 	string send_data(tempbuf);
 	USBPORT.write(send_data);
 	break;
-
       }
       case COMMAND_TAKEOFF:{
 	std_msgs::Bool cmd = get_takeoff_command(buf, alg);
@@ -369,8 +369,8 @@ int main(int argc, char **argv)
 	if(command_type == COMMAND_WAYPOINT)
 	  wp_pub.publish(waypoint_list);
 	takeoff_pub.publish(takeoff_command);
-	if(command_type == COMMAND_BOX)
-	  box_pub.publish(box);
+	//if(command_type == COMMAND_BOX)
+	//  box_pub.publish(box);
       }
       break;
     }
@@ -384,6 +384,10 @@ int main(int argc, char **argv)
       realTarget_pub.publish(realTarget);
       home_pub.publish(agent_home);
     }
+    if (NEW_BOX){
+      box_pub.publish(box);
+    }
+    
 
     // Send GPS mps state and battery data every 1 sec
     if(count%2 == 0)
