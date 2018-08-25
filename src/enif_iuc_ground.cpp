@@ -319,18 +319,18 @@ int main(int argc, char **argv)
   ros::Publisher  mps_pub        = n.advertise<enif_iuc::AgentMPS>("mps_data", 1);  
   ros::Publisher  agentHomes_pub = n.advertise<geographic_msgs::GeoPoint>("agent_home", 1);  
   ros::Publisher  GPS_pub      = n.advertise<enif_iuc::AgentGlobalPosition>("global_position", 1);
-  ros::Publisher  height_pub   = n.advertise<enif_iuc::AgentHeight>("ext_height", 1);
-  ros::Publisher  battery_pub  = n.advertise<enif_iuc::AgentBatteryState>("battery", 1);
-  ros::Publisher  wpcheck_pub  = n.advertise<enif_iuc::AgentCheck>("waypoint_check", 1);
-  ros::Publisher  boxcheck_pub = n.advertise<enif_iuc::AgentCheck>("rotated_box_check", 1);
+  ros::Publisher  height_pub   = n.advertise<enif_iuc::AgentHeight>("ext_height", 5);
+  ros::Publisher  battery_pub  = n.advertise<enif_iuc::AgentBatteryState>("battery", 5);
+  ros::Publisher  wpcheck_pub  = n.advertise<enif_iuc::AgentCheck>("waypoint_check", 5);
+  ros::Publisher  boxcheck_pub = n.advertise<enif_iuc::AgentCheck>("rotated_box_check", 5);
   ros::Publisher  agent_targetE_pub  = n.advertise<enif_iuc::AgentSource>("agent_targetE", 1);
   ros::Publisher  sourcecheck_pub = n.advertise<enif_iuc::AgentCheck>("source_check", 1);
   
   ros::Subscriber sub_takeoff    = n.subscribe("takeoff_command",5,takeoff_callback);
   ros::Subscriber sub_wp         = n.subscribe("waypoint_list",5,wp_callback);
-  ros::Subscriber sub_box        = n.subscribe("rotated_box",1,box_callback);
-  ros::Subscriber sub_realTarget = n.subscribe("source",1,realTarget_callback);
-  ros::Subscriber sub_planningalgorithm = n.subscribe("planning_algorithm",1, alg_callback);
+  ros::Subscriber sub_box        = n.subscribe("rotated_box",5,box_callback);
+  ros::Subscriber sub_realTarget = n.subscribe("source",5,realTarget_callback);
+  ros::Subscriber sub_planningalgorithm = n.subscribe("planning_algorithm",5, alg_callback);
    
   
   ros::Rate loop_rate(100);
@@ -548,6 +548,10 @@ int main(int argc, char **argv)
 	      USBPORT.write(send_data);
 	      cout<<"send waypoint to agent "<<agent_number_wp<<endl;
 	    }
+	  if(agent_number_box >= 3)//Loop through the agent to check send box
+	    agent_number_box = 1;
+	  else
+	    agent_number_box++;	  
 	  break;
 	case 2:
 	  if(source_checked[agent_number_source] == false && agent_number_source > 0)
