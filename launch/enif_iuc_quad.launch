@@ -1,9 +1,10 @@
 <?xml version="1.0"?>
 
 <launch>
+  <arg name="AGENT_NUMBER" default="1"/>
 
   <node name="enif_iuc_quad" pkg="enif_iuc" type="enif_iuc_quad" respawn="true" launch-prefix="" output="screen">
-    <param name="AGENT_NUMBER" type="int" value="2"/>
+    <param name="AGENT_NUMBER" type="int" value="$(arg AGENT_NUMBER)"/>
     <param name="USB" type="string" value="/dev/xbee"/>
     <param name="sendLocal" type="bool" value="false"/>
     <param name="sendBat" type="bool" value="false"/>
