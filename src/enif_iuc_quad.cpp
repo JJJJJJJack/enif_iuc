@@ -275,7 +275,7 @@ int main(int argc, char **argv)
 		agent_home.home.geo.altitude = realTarget.source.altitude;
 		NEW_REALTARGET = true;
 	      }
-	      int tempbuf_size = 42;
+	      int tempbuf_size = 45;
 	      char tempbuf[tempbuf_size];
 	      cut_buf(buf, tempbuf, tempbuf_size);
 	      buf+=tempbuf_size;
