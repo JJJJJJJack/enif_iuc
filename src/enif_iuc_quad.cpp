@@ -13,6 +13,16 @@
 
 bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false, NEW_HOME = false, NEW_LOCAL = false, NEW_TARGETE=false, NEW_REALTARGET=false, NEW_BOX=false;
 
+bool ERROR_CA = false, ERROR_LIDAR = false, ERROR_ALTITUDE = false, ERROR_GPS = false, ERROR_MPS = false;
+double CA_update_sec, Lidar_update_sec, GPS_update_sec, MPS_update_sec;
+/*------------Error info format---------------
+The error info is combined with agentState in the state command
+
+ -      -     -    -    -   |   - - -
+GPS   Lidar  CA   Alt  MPS  | agentState
+
+---------------------------------------------*/
+
 using namespace std;
 
 void state_callback(const std_msgs::UInt8 &new_message)
@@ -49,12 +59,30 @@ void mps_callback(const mps_driver::MPS &new_message)
   else
     GAS_ID = GAS_NONE;
   NEW_MPS = true;
+  ERROR_MPS = false;
+  MPS_update_sec = ros::Time::now().toSec();
 }
 
 void GPS_callback(const sensor_msgs::NavSatFix &new_message)
 {
   gps = new_message;
   NEW_GPS = true;
+  ERROR_GPS = false;
+  GPS_update_sec = ros::Time::now().toSec();
+  if(gps.altitude > 0)
+    ERROR_ALTITUDE = false;
+}
+
+void lidar_callback(const sensor_msgs::LaserScan::ConstPtr &new_message)
+{
+  ERROR_LIDAR = false;
+  Lidar_update_sec = ros::Time::now().toSec();
+}
+
+void CA_callback(const geometry_msgs::Twist::ConstPtr &new_message)
+{
+  ERROR_CA = false;
+  CA_update_sec = ros::Time::now().toSec();
 }
 
 void height_callback(const sensor_msgs::Range &new_message)
@@ -135,9 +163,11 @@ void form_GPS(char* buf)
 
 void form_state(char* buf)
 {
+  //Adding error info into state
+  int error_info = ERROR_GPS<<7 | ERROR_LIDAR<<6 | ERROR_CA<<5 | ERROR_ALTITUDE<<4 | ERROR_MPS<<3 | state.data;
   buf[1] = IntToChar(AGENT_NUMBER);
   buf[2] = IntToChar(COMMAND_STATE);
-  buf[3] = IntToChar(state.data);
+  buf[3] = IntToChar(error_info);
   buf[4] = 0x0A;
 }
 
@@ -175,7 +205,9 @@ int main(int argc, char **argv)
 
   ros::Subscriber sub_home    = n.subscribe("/mavros/home_position/home",1,home_callback);
   ros::Subscriber sub_local   = n.subscribe("/mavros/global_position/local",1,local_callback);
-
+  // Following topics are only subscribed for debugging
+  ros::Subscriber sub_lidar   = n.subscribe("/scan",1,lidar_callback);
+  ros::Subscriber sub_CA      = n.subscribe("/cmd_vel",1,CA_callback);
 
   n.getParam("/enif_iuc_quad/AGENT_NUMBER", AGENT_NUMBER);
   cout<<"This is Agent No."<<AGENT_NUMBER<<endl;
@@ -191,10 +223,18 @@ int main(int argc, char **argv)
   
   ros::Rate loop_rate(100);
 
+  // Set timeout for XBEE reading
   struct timeval tvstart, tvend, timeout;
   gettimeofday(&tvstart,NULL);
   timeout.tv_sec = 1;
   timeout.tv_usec = 0;
+
+  // Initialize error info update time
+  double current_time_sec = ros::Time::now().toSec();
+  GPS_update_sec = current_time_sec;
+  Lidar_update_sec = current_time_sec;
+  MPS_update_sec = current_time_sec;
+  CA_update_sec = current_time_sec;
 
   // Start the USB serial port
   n.getParam("/enif_iuc_quad/USB", USB);
@@ -334,6 +374,9 @@ int main(int argc, char **argv)
 	std_msgs::Bool cmd = get_takeoff_command(buf, alg);
 
 	switch (alg.data) {
+	case 0 :
+	  n.setParam("/runAlg", "Waypoint");
+	  break;
 	case 1 :	  
 	  n.setParam("/runAlg", "lawnMower");
 	  break;
@@ -426,7 +469,24 @@ int main(int argc, char **argv)
 	}
 	if(send_count <= 2) send_count++;
 	else send_count = 0;       
-      }    
+      }
+    
+    //Check Error messages
+    current_time_sec = ros::Time::now().toSec();
+    double Lidar_interval = current_time_sec - Lidar_update_sec;
+    double CA_interval    = current_time_sec - CA_update_sec;
+    double GPS_interval   = current_time_sec - GPS_update_sec;
+    double MPS_interval   = current_time_sec - MPS_update_sec;
+    if(Lidar_interval > 0.5)
+      ERROR_LIDAR = true;
+    if(CA_interval > 0.5)
+      ERROR_CA = true;
+    if(GPS_interval > 0.5)
+      ERROR_GPS = true;
+    if(gps.altitude < 0)
+      ERROR_ALTITUDE = true;
+    if(MPS_interval > 0.5)
+      ERROR_MPS = true;
     
     ros::spinOnce();
     loop_rate.sleep();

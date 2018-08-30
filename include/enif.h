@@ -24,12 +24,14 @@
 #include "geometry_msgs/PoseStamped.h"
 #include <mavros_msgs/HomePosition.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include "geometry_msgs/Twist.h"
 #include <nav_msgs/Odometry.h>
 #include "std_msgs/UInt8.h"
 #include "std_msgs/Bool.h"
 #include "sensor_msgs/NavSatFix.h"
 #include "sensor_msgs/Range.h"
 #include "sensor_msgs/BatteryState.h"
+#include "sensor_msgs/LaserScan.h"
 #include "std_msgs/Float64MultiArray.h"
 #include "std_msgs/Int8.h"
 #include "enif_iuc/Waypoint.h"
