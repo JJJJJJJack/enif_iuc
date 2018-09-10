@@ -411,11 +411,11 @@ int main(int argc, char **argv)
       {
 	if(command_type == COMMAND_WAYPOINT)
 	  wp_pub.publish(waypoint_list);
-	takeoff_pub.publish(takeoff_command);
+	if(command_type == COMMAND_TAKEOFF)
+	  takeoff_pub.publish(takeoff_command);
 	//if(command_type == COMMAND_BOX)
 	//  box_pub.publish(box);
       }
-      break;
     }
     c++;
     if (c>50)

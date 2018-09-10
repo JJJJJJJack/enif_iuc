@@ -421,6 +421,7 @@ int main(int argc, char **argv)
 	    agent_height.height = height;
 	    height_pub.publish(agent_height);
 	    GPS_pub.publish(agent_gps);
+	    mps_pub.publish(agent_mps);
 	  }
 	}
 	break;

@@ -213,13 +213,12 @@ void form_checksum(char* buf)
 std_msgs::Bool get_takeoff_command(char* buf, std_msgs::Int8 &newAlg)
 {
   std_msgs::Bool result;
-  int takeoff_newAlg = CharToInt(buf[3]);
+  uint8_t takeoff_newAlg = CharToInt(buf[3]);
   if(takeoff_newAlg >= 100)
     result.data = true;
   else
     result.data = false;
   newAlg.data = takeoff_newAlg - result.data*100;
-      
   return result;
 }
 
@@ -314,7 +313,7 @@ bool extract_GPS_from_MPS(mps_driver::MPS mps_read)
 {
   if(checkValue(mps_read.GPS_latitude, -180, 180) &&
      checkValue(mps_read.GPS_longitude, -180, 180) &&
-     checkValue(mps_read.GPS_altitude, 0, 2000)){
+     checkValue(mps_read.GPS_altitude, -2000, 6000)){
     gps.latitude = mps_read.GPS_latitude;
     gps.longitude = mps_read.GPS_longitude;
     gps.altitude = mps_read.GPS_altitude;
