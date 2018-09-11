@@ -203,8 +203,9 @@ void box_callback(const enif_iuc::AgentBox &new_message)
 }
 
 void get_state(char* buf)
-{
+{  
   state.data = CharToInt(buf[3]);
+  package_length = 5;
 }
 
 void get_GPS(char* buf)
@@ -221,6 +222,7 @@ void get_GPS(char* buf)
   CharToDouble(buf+21, ext_height);
   height.range = ext_height;
   height.header.stamp = ros::Time::now();
+  
 }
 
 void get_battery(char* buf)
@@ -381,19 +383,6 @@ int main(int argc, char **argv)
       
       bool checksum_result = false;
       switch(command_type){
-      case COMMAND_GPS:
-	//form GPS, ext_height(lidar height) and publish
-	get_GPS(buf);
-	agent_gps.agent_number = target_number;
-	agent_gps.gps = gps;
-	agent_height.agent_number = target_number;
-	agent_height.height = height;
-	checksum_result = checksum(buf);
-	if(checksum_result && agent_gps.gps.status.status == 0){
-	  height_pub.publish(agent_height);
-	  GPS_pub.publish(agent_gps);
-	}
-	break;
       case COMMAND_MPS:
 	//form mps and publish
 	checksum_result = checksum(buf);
@@ -401,7 +390,6 @@ int main(int argc, char **argv)
 	ROS_INFO_THROTTLE(0.1, "Quad No.%d MPS", target_number);
 	agent_mps.agent_number = target_number;
 	agent_mps.mps = mps;
-	buf = buf+45;
 	if(mps.percentLEL != 0){
 	  if(agent_mps.mps.percentLEL > 0 && agent_mps.mps.percentLEL < 100)
 	    mps_pub.publish(agent_mps);
@@ -432,17 +420,7 @@ int main(int argc, char **argv)
 	agent_state.agent_number = target_number;
 	agent_state.state = state;
 	ROS_INFO_THROTTLE(0.1, "Quad No.%d state", target_number);
-	buf = buf+5;
 	state_pub.publish(agent_state);
-	break;
-      case COMMAND_BATTERY:
-	//form battery state and publish
-	checksum_result = checksum(buf);
-	get_battery(buf);
-	agent_battery.agent_number = target_number;
-	agent_battery.battery = battery;
-	buf = buf+8;
-	battery_pub.publish(agent_battery);
 	break;
       case COMMAND_WAYPOINT:
 	//response from the agent
@@ -457,7 +435,6 @@ int main(int argc, char **argv)
 	wpcheck_msg.check.data = waypoint_checked[response_number];
 	wpcheck_pub.publish(wpcheck_msg);
 	cout<<waypoint_list<<endl;
-	buf = buf+get_waypointlist_buf_size(waypoint_number)+1;
 	break;
       case COMMAND_BOX:
 	//only verifies response from the agent
@@ -470,7 +447,6 @@ int main(int argc, char **argv)
 	boxcheck_msg.check.data = box_checked[response_number];
 	boxcheck_pub.publish(boxcheck_msg);
 	cout<<box<<endl;
-	buf = buf+50;
 	break;
       case COMMAND_TAKEOFF:
 	//only verifies response from the agent
@@ -479,16 +455,12 @@ int main(int argc, char **argv)
 	takeoff_checked[response_number] = check_takeoff(agent_takeoff[response_number].takeoff_command, takeoff_command) && check_alg(alg, response_alg);
 	cout<<"Takeoff check: "<<takeoff_checked[response_number]<<endl;
 	cout<<takeoff_command<<endl;
-	buf = buf+5;
 	break;
       case COMMAND_TARGETE:
 	{
-	  enif_iuc::AgentSource agentSource;
-	  agentSource.agent_number = get_target_number(buf);	
 	  get_targetE(buf);
-	  agentSource.source = targetE;
-	  agent_targetE_pub.publish(agentSource);
-	  buf = buf+28;	
+	  targetE.agent_number = get_target_number(buf);	
+	  agent_targetE_pub.publish(targetE);
 	break;
 	}
       case COMMAND_REALTARGET:
@@ -503,13 +475,12 @@ int main(int argc, char **argv)
 	  sourcecheck_msg.agent_number = response_number;
 	  sourcecheck_msg.check.data = source_checked[response_number];
 	  sourcecheck_pub.publish(sourcecheck_msg);
-
-	  buf = buf+28;
 	  break;
 	}
       default:
 	break;
       }
+      buf=buf+package_length;
     }
     if(c++>50)
       break;

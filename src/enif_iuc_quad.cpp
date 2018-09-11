@@ -37,7 +37,7 @@ void home_callback(const mavros_msgs::HomePosition &new_message)
   NEW_HOME = true;
 }
 
-void targetEGPS_callback(const geographic_msgs::GeoPoint &new_message)
+void targetEGPS_callback(const enif_iuc::AgentSource &new_message)
 {
   targetE = new_message;
   NEW_TARGETE = true;
@@ -111,6 +111,7 @@ void form_mps(char* buf)
   DoubleToChar(buf+4+32, gps.altitude);
   buf[4+40] = 0x0A;
   // Clear the percentLEL to make sure we don't pub wrong data when we get new GPS
+
   clearmps();
 }
 
@@ -118,10 +119,17 @@ void form_targetE(char* buf)
 {
   buf[1] = IntToChar(AGENT_NUMBER);
   buf[2] = IntToChar(COMMAND_TARGETE);
-  DoubleToChar(buf+3, targetE.latitude);
-  DoubleToChar(buf+3+8, targetE.longitude);
-  DoubleToChar(buf+3+8+8, targetE.altitude);
-  buf[3+8+8+8] = 0x0A;
+  DoubleToChar(buf+3, targetE.source.latitude);
+  DoubleToChar(buf+11, targetE.source.longitude);
+  DoubleToChar(buf+19, targetE.source.altitude);
+  
+  FloatToChar(buf+27, targetE.angle);
+  FloatToChar(buf+31, targetE.wind_speed);
+  FloatToChar(buf+35, targetE.diff_y);
+  FloatToChar(buf+39, targetE.diff_z);
+  FloatToChar(buf+43, targetE.release_rate);  
+  
+  buf[47] = 0x0A;
 }
 
 void form_local(char* buf)
@@ -187,8 +195,8 @@ int main(int argc, char **argv)
   ros::Publisher  takeoff_pub = n.advertise<std_msgs::Bool>("takeoff_command", 1);
   ros::Publisher  wp_pub      = n.advertise<enif_iuc::WaypointTask>("waypoint_list", 1);
   ros::Publisher  box_pub     = n.advertise<std_msgs::Float64MultiArray>("rotated_box", 1);
-  ros::Publisher  mps_pub     = n.advertise<enif_iuc::AgentMPS>("agent_mps_data", 1);
-
+  ros::Publisher  mps_pub     = n.advertise<enif_iuc::AgentMPS>("agent_mps_data", 1);  
+  ros::Publisher  mle_pub     = n.advertise<enif_iuc::AgentSource>("agent_mle_data", 1);
   
   ros::Publisher  home_pub    = n.advertise<enif_iuc::AgentHome>("agent_home_data", 1);
   ros::Publisher  local_pub   = n.advertise<enif_iuc::AgentLocal>("agent_local_data", 1);
@@ -256,7 +264,7 @@ int main(int argc, char **argv)
     char *buf = charbuf;
     int command_type = get_command_type(buf);
     int c = 0;
-    while(buf[0] != '\0' && (command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_BOX || command_type==COMMAND_TAKEOFF || command_type==COMMAND_WAYPOINT) || command_type==COMMAND_REALTARGET){
+    while(buf[0] != '\0' && (command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_BOX || command_type==COMMAND_TAKEOFF || command_type==COMMAND_WAYPOINT) || command_type==COMMAND_REALTARGET || command_type==COMMAND_TARGETE){
       command_type = get_command_type(buf);
       //      cout<<strlen(buf)<<endl;
       //RnnnnnnOS_INFO_THROTTLE(1,"%d",strlen(buf));
@@ -269,7 +277,7 @@ int main(int argc, char **argv)
 	// Get command type
 
 	bool checksum_result = false;
-	enif_iuc::AgentMPS agent_mps;	
+	enif_iuc::AgentMPS agent_mps;
 	enif_iuc::AgentLocal agent_local;
 	
 	sensor_msgs::NavSatFix my_gps = gps;
@@ -324,7 +332,22 @@ int main(int argc, char **argv)
 	      USBPORT.write(send_data);
 	      //std::cout<<"sendingData"<<std::endl;
 	    }
-	  break;	  
+	  break;
+	case COMMAND_TARGETE:
+	  //get source and publish
+	  ROS_INFO_THROTTLE(1,"Receiving target estimate");
+	  checksum_result = checksum(buf);
+	  get_targetE_other(buf);
+	  
+	  if(checkValue(targetE_other.source.latitude,-180,180) && checkValue(targetE_other.source.longitude,-180,180) && checkValue(targetE_other.source.altitude,0,2000)){
+	    // !=5000 filter targetE from pso
+	    targetE_other.agent_number = target_number;
+	    //publish the target estimate	
+	    mle_pub.publish(targetE_other);
+	  }
+	  
+	  break;
+	  
 	default:
 	  break;
 	}
@@ -423,6 +446,7 @@ int main(int argc, char **argv)
 	break;
       }
     }
+    
     if (NEW_REALTARGET){
       realTarget_pub.publish(realTarget);
       home_pub.publish(agent_home);

@@ -64,6 +64,8 @@ using namespace std;
 #define REMAP_A 0.5
 #define REMAP_B -990.0
 
+int package_length = 0;
+
 // transmit local and home info from quad
 bool sendLocal = false;
 bool sendBat   = false;
@@ -85,8 +87,7 @@ sensor_msgs::BatteryState battery;
 mavros_msgs::HomePosition home;
 nav_msgs::Odometry local;
 
-geographic_msgs::GeoPoint targetE;
-enif_iuc::AgentSource realTarget;
+enif_iuc::AgentSource realTarget, targetE, targetE_other;
 enif_iuc::AgentHome agent_home;
 
 //containers for enif_iuc_ground
@@ -219,6 +220,8 @@ std_msgs::Bool get_takeoff_command(char* buf, std_msgs::Int8 &newAlg)
   else
     result.data = false;
   newAlg.data = takeoff_newAlg - result.data*100;
+
+  package_length = 5;
   return result;
 }
 
@@ -235,6 +238,15 @@ void get_waypoint_info(char* buf, enif_iuc::WaypointTask &waypoint_list)
   CharToDouble(buf+12, damping_distance);
   waypoint_list.damping_distance = damping_distance;
 }
+
+int get_waypointlist_buf_size(int waypoint_number)
+{
+  int buf_size = 0;
+  //20 bytes of wp info + 25 bytes per waypoint
+  buf_size = 20+25*waypoint_number;
+  return buf_size;
+}
+
 
 void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypoint_list)
 {
@@ -261,6 +273,8 @@ void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypo
       byte_number++;
       waypoint_list.mission_waypoint.push_back(waypoint);
     }
+  int waypt_num = get_waypoint_number(buf);
+  package_length = get_waypointlist_buf_size(waypt_num)+1;
 }
 
 void cut_buf(char* buf_0, char* buf_1, int size)
@@ -272,13 +286,6 @@ void cut_buf(char* buf_0, char* buf_1, int size)
   //buf_0 += size;
 }
 
-int get_waypointlist_buf_size(int waypoint_number)
-{
-  int buf_size = 0;
-  //20 bytes of wp info + 25 bytes per waypoint
-  buf_size = 20+25*waypoint_number;
-  return buf_size;
-}
 
 void get_box(char* buf, std_msgs::Float64MultiArray &box)
 {
@@ -296,6 +303,9 @@ void get_box(char* buf, std_msgs::Float64MultiArray &box)
   wp_radius  = CharToInt(buf[46]);
   stepwidth  = CharToInt(buf[47]);
   stepheight = CharToInt(buf[48]);
+
+  package_length = 50;
+  
   box.data.push_back(longitude);
   box.data.push_back(latitude);
   box.data.push_back(width);
@@ -406,6 +416,8 @@ void get_mps(char* buf)
   CharToDouble(buf+4+32, GPS_altitude);
   mps.GPS_altitude = GPS_altitude;
   buf = buf + 44;
+
+  package_length=45;
   
 }
 
@@ -442,33 +454,71 @@ void get_other_mps(char* buf)
   
 }
 
-void get_targetE(char* buf)
+void get_targetE_other(char* buf)
 {
   double latitude, longitude, altitude;
-  
-  CharToDouble(buf+3, latitude);
-  CharToDouble(buf+11, longitude);
-  CharToDouble(buf+19, altitude);
-  
-  targetE.latitude = latitude;
-  targetE.longitude = longitude;  
-  targetE.altitude = altitude;
-  buf = buf + 28;
-}
-
-void get_realTarget(char* buf)
-{
-  double latitude, longitude, altitude, wind_speed;
-  float angle, diff_y, diff_z, release_rate;
+  float angle, diff_y, diff_z, release_rate, wind_speed;
   CharToDouble(buf+3, latitude);
   CharToDouble(buf+11, longitude);
   CharToDouble(buf+19, altitude);
   CharToFloat(buf+27, angle);
+  CharToFloat(buf+31, wind_speed);    
+  CharToFloat(buf+35, diff_y);
+  CharToFloat(buf+39, diff_z);
+  CharToFloat(buf+43, release_rate);
+  
+  targetE_other.source.latitude = latitude;
+  targetE_other.source.longitude = longitude;  
+  targetE_other.source.altitude = altitude;
+  targetE_other.angle = angle;
+  targetE_other.wind_speed = wind_speed;
+  targetE_other.diff_y = diff_y;
+  targetE_other.diff_z = diff_z;
+  targetE_other.release_rate = release_rate;
+  
+  buf = buf + 47;
 
-  wind_speed = CharToInt(buf[31]);
-  CharToFloat(buf+32, diff_y);
-  CharToFloat(buf+36, diff_z);
-  CharToFloat(buf+40, release_rate);
+}
+
+void get_targetE(char* buf)
+{
+  double latitude, longitude, altitude;
+  float angle, diff_y, diff_z, release_rate, wind_speed;
+  CharToDouble(buf+3, latitude);
+  CharToDouble(buf+11, longitude);
+  CharToDouble(buf+19, altitude);
+  CharToFloat(buf+27, angle);
+  CharToFloat(buf+31, wind_speed);    
+  CharToFloat(buf+35, diff_y);
+  CharToFloat(buf+39, diff_z);
+  CharToFloat(buf+43, release_rate);
+  
+  targetE.source.latitude = latitude;
+  targetE.source.longitude = longitude;  
+  targetE.source.altitude = altitude;
+  targetE.angle = angle;
+  targetE.wind_speed = wind_speed;
+  targetE.diff_y = diff_y;
+  targetE.diff_z = diff_z;
+  targetE.release_rate = release_rate;
+  
+  package_length=48;
+
+}
+
+
+void get_realTarget(char* buf)
+{
+  double latitude, longitude, altitude;
+  float angle, diff_y, diff_z, release_rate, wind_speed;
+  CharToDouble(buf+3, latitude);
+  CharToDouble(buf+11, longitude);
+  CharToDouble(buf+19, altitude);
+  CharToFloat(buf+27, angle);
+  CharToFloat(buf+31, wind_speed);    
+  CharToFloat(buf+35, diff_y);
+  CharToFloat(buf+39, diff_z);
+  CharToFloat(buf+43, release_rate);
   
   realTarget.source.latitude = latitude;
   realTarget.source.longitude = longitude;  
@@ -479,7 +529,7 @@ void get_realTarget(char* buf)
   realTarget.diff_z = diff_z;
   realTarget.release_rate = release_rate;
   
-  buf = buf + 44;
+  package_length=48;
 }
 
 
