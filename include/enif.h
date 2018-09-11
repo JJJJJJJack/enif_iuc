@@ -415,10 +415,8 @@ void get_mps(char* buf)
   mps.GPS_longitude = GPS_longitude;
   CharToDouble(buf+4+32, GPS_altitude);
   mps.GPS_altitude = GPS_altitude;
-  buf = buf + 44;
 
-  package_length=45;
-  
+  package_length = 45;  
 }
 
 void get_other_mps(char* buf)
@@ -450,8 +448,8 @@ void get_other_mps(char* buf)
   mps_other.GPS_longitude = GPS_longitude;
   CharToDouble(buf+4+32, GPS_altitude);
   mps_other.GPS_altitude = GPS_altitude;
-  buf = buf + 44;
-  
+
+  package_length = 45;
 }
 
 void get_targetE_other(char* buf)
@@ -476,8 +474,6 @@ void get_targetE_other(char* buf)
   targetE_other.diff_z = diff_z;
   targetE_other.release_rate = release_rate;
   
-  buf = buf + 47;
-
 }
 
 void get_targetE(char* buf)
@@ -502,8 +498,7 @@ void get_targetE(char* buf)
   targetE.diff_z = diff_z;
   targetE.release_rate = release_rate;
   
-  package_length=48;
-
+  package_length = 48;
 }
 
 
@@ -529,7 +524,7 @@ void get_realTarget(char* buf)
   realTarget.diff_z = diff_z;
   realTarget.release_rate = release_rate;
   
-  package_length=48;
+  package_length = 48;
 }
 
 

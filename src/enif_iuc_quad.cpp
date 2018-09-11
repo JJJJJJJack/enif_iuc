@@ -293,7 +293,6 @@ int main(int argc, char **argv)
 	  ROS_INFO_THROTTLE(1,"Receiving mps quad info from Agent %d", target_number);
 	  checksum_result = checksum(buf);
 	  get_other_mps(buf);
-	  buf = buf + 45;
 	  agent_mps.agent_number = target_number;
 	  agent_mps.mps = mps_other;
 	  if(check_MPS(mps_other)){
@@ -323,7 +322,7 @@ int main(int argc, char **argv)
 		agent_home.home.geo.altitude = realTarget.source.altitude;
 		NEW_REALTARGET = true;
 	      }
-	      int tempbuf_size = 45;
+	      int tempbuf_size = package_length;
 	      char tempbuf[tempbuf_size];
 	      cut_buf(buf, tempbuf, tempbuf_size);
 	      buf+=tempbuf_size;
@@ -344,13 +343,12 @@ int main(int argc, char **argv)
 	    targetE_other.agent_number = target_number;
 	    //publish the target estimate	
 	    mle_pub.publish(targetE_other);
-	  }
-	  
+	  }	  
 	  break;
-	  
 	default:
 	  break;
 	}
+	buf += package_length;
 	if(command_type==COMMAND_WAYPOINT || command_type==COMMAND_TAKEOFF || command_type==COMMAND_BOX)
 	  break;
       }
@@ -369,7 +367,7 @@ int main(int argc, char **argv)
 	checksum_result = checksum(buf);
 	cout<<waypoint_list<<endl;
 
-	int tempbuf_size = get_waypointlist_buf_size(waypoint_number)+1;
+	int tempbuf_size = package_length;
 	char tempbuf[tempbuf_size];
 	cut_buf(buf, tempbuf, tempbuf_size);
 	buf+=tempbuf_size;
@@ -385,7 +383,7 @@ int main(int argc, char **argv)
 	checksum_result = checksum(buf);
 	cout<<box<<endl;
 	NEW_BOX = true;
-	int tempbuf_size = 50;
+	int tempbuf_size = package_length;
 	char tempbuf[tempbuf_size];
 	cut_buf(buf, tempbuf, tempbuf_size);
 	buf+=tempbuf_size;
@@ -419,7 +417,7 @@ int main(int argc, char **argv)
 	else
 	  cout<< " Land"<<endl;
 	checksum_result = checksum(buf);
-	int tempbuf_size = 5;
+	int tempbuf_size = package_length;
 	char tempbuf[tempbuf_size];
 	cut_buf(buf, tempbuf, tempbuf_size);
 	buf+=tempbuf_size;

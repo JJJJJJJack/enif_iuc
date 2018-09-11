@@ -238,14 +238,14 @@ void get_battery(char* buf)
   buf[1] = IntToChar(agent_number);
   buf[2] = IntToChar(COMMAND_REALTARGET);  
   DoubleToChar(buf+3, sendSource.source.latitude);
-  DoubleToChar(buf+3+8, sendSource.source.longitude);
-  DoubleToChar(buf+3+8+8, sendSource.source.altitude);
+  DoubleToChar(buf+11, sendSource.source.longitude);
+  DoubleToChar(buf+19, sendSource.source.altitude);
   FloatToChar(buf+27, sendSource.angle);
-  buf[31] = IntToChar(sendSource.wind_speed);
-  FloatToChar(buf+32, sendSource.diff_y);
-  FloatToChar(buf+36,sendSource.diff_z);
-  FloatToChar(buf+40,sendSource.release_rate);
-  buf[44] = 0x0A;
+  FloatToChar(buf+31, sendSource.wind_speed);
+  FloatToChar(buf+35, sendSource.diff_y);
+  FloatToChar(buf+39,sendSource.diff_z);
+  FloatToChar(buf+43,sendSource.release_rate);
+  buf[47] = 0x0A;
 }
 
 void form_takeoff(char* buf, int agent_number, std_msgs::Bool takeoff)
