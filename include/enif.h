@@ -279,16 +279,14 @@ void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypo
 
 void cut_buf(char* buf_0, char* buf_1, int size)
 {
-  //  char tbuf[size];
-  //  buf_1 = tbuf;
   strncpy(buf_1, buf_0, size-1);
   buf_1[size-1] = 0x0A;
-  //buf_0 += size;
 }
 
-
-void get_box(char* buf, std_msgs::Float64MultiArray &box)
+// return false if the box is not valid
+bool get_box(char* buf, std_msgs::Float64MultiArray &box)
 {
+  bool valid_box = false;
   double latitude, longitude, width, height, angle;
   double staytime, wp_height, velocity, wp_radius;
   double stepwidth, stepheight;
@@ -305,6 +303,17 @@ void get_box(char* buf, std_msgs::Float64MultiArray &box)
   stepheight = CharToInt(buf[48]);
 
   package_length = 50;
+
+  if(checkValue(latitude, -180, 180) && checkValue(longitude, -180, 180) &&
+     checkValue(width, 0, 1e+06)     && checkValue(height, 0, 1e+06) &&
+     checkValue(staytime, 0, 1e+06)  && checkValue(angle, -180, 180) &&
+     checkValue(wp_height, 0, 100)   && checkValue(velocity, 0, 50) &&
+     checkValue(wp_radius, 0, 100)   && checkValue(stepwidth, 0, 1e+06) &&
+     checkValue(stepheight, 0, 1e+06)){
+    valid_box = true;
+  }else{
+    return false;
+  }   
   
   box.data.push_back(longitude);
   box.data.push_back(latitude);
@@ -317,6 +326,8 @@ void get_box(char* buf, std_msgs::Float64MultiArray &box)
   box.data.push_back(wp_radius);
   box.data.push_back(stepwidth);
   box.data.push_back(stepheight);
+
+  return valid_box;
 }
 
 bool extract_GPS_from_MPS(mps_driver::MPS mps_read)

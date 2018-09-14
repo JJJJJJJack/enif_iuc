@@ -379,10 +379,9 @@ int main(int argc, char **argv)
       case COMMAND_BOX:{
 	cout<< " Box"<<endl;
 	box.data.clear();
-	get_box(buf, box);
+	NEW_BOX = get_box(buf, box);
 	checksum_result = checksum(buf);
 	cout<<box<<endl;
-	NEW_BOX = true;
 	int tempbuf_size = package_length;
 	char tempbuf[tempbuf_size];
 	cut_buf(buf, tempbuf, tempbuf_size);
