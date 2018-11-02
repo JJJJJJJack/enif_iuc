@@ -57,7 +57,9 @@ using namespace std;
 #define COMMAND_TARGETE    11
 #define COMMAND_REALTARGET 12
 
-#define MPS_LENGTH       44
+#define MPS_LENGTH        42
+#define REALTARGET_LENGTH 45
+#define TARGETE_LENGTH    45
 
 #define GAS_NONE    0
 #define GAS_PROPANE 1
@@ -451,7 +453,7 @@ void get_mps(char* buf)
 
 void get_other_mps(char* buf)
 {
-  GAS_ID = CharToInt(buf[1]);
+  GAS_ID = CharToInt(buf[0]);
   if(GAS_ID == GAS_PROPANE){
     string str = "Propane";
     mps_other.gasID = str;
@@ -486,14 +488,14 @@ void get_targetE_other(char* buf)
 {
   double latitude, longitude, altitude;
   float angle, diff_y, diff_z, release_rate, wind_speed;
-  CharToDouble(buf+3, latitude);
-  CharToDouble(buf+11, longitude);
-  CharToDouble(buf+19, altitude);
-  CharToFloat(buf+27, angle);
-  CharToFloat(buf+31, wind_speed);    
-  CharToFloat(buf+35, diff_y);
-  CharToFloat(buf+39, diff_z);
-  CharToFloat(buf+43, release_rate);
+  CharToDouble(buf, latitude);
+  CharToDouble(buf+8, longitude);
+  CharToDouble(buf+16, altitude);
+  CharToFloat(buf+24, angle);
+  CharToFloat(buf+28, wind_speed);    
+  CharToFloat(buf+32, diff_y);
+  CharToFloat(buf+36, diff_z);
+  CharToFloat(buf+40, release_rate);
   
   targetE_other.source.latitude = latitude;
   targetE_other.source.longitude = longitude;  
@@ -536,14 +538,14 @@ void get_realTarget(char* buf)
 {
   double latitude, longitude, altitude;
   float angle, diff_y, diff_z, release_rate, wind_speed;
-  CharToDouble(buf+3, latitude);
-  CharToDouble(buf+11, longitude);
-  CharToDouble(buf+19, altitude);
-  CharToFloat(buf+27, angle);
-  CharToFloat(buf+31, wind_speed);    
-  CharToFloat(buf+35, diff_y);
-  CharToFloat(buf+39, diff_z);
-  CharToFloat(buf+43, release_rate);
+  CharToDouble(buf, latitude);
+  CharToDouble(buf+8, longitude);
+  CharToDouble(buf+16, altitude);
+  CharToFloat(buf+24, angle);
+  CharToFloat(buf+28, wind_speed);    
+  CharToFloat(buf+32, diff_y);
+  CharToFloat(buf+36, diff_z);
+  CharToFloat(buf+40, release_rate);
   
   realTarget.source.latitude = latitude;
   realTarget.source.longitude = longitude;  

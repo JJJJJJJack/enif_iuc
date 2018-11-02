@@ -201,15 +201,17 @@ void transmitData(const ros::TimerEvent& event)
     NEW_GPS = false;
   }	
   if(NEW_STATE){
+    form_start(send_buf);
     form_state(send_buf);
-    form_checksum(send_buf);
+    //form_checksum(send_buf);
     string send_data(send_buf);
     USBPORT.write(send_data);
     NEW_STATE = false;
   }
-  if(NEW_TARGETE && sendTargetE){	    
+  if(NEW_TARGETE && sendTargetE){
+    form_start(send_buf);
     form_targetE(send_buf);
-    form_checksum(send_buf);	    
+    //form_checksum(send_buf);	    
     string send_data(send_buf);	    
     USBPORT.write(send_data);
     NEW_TARGETE = false;	    
@@ -230,7 +232,6 @@ int main(int argc, char **argv)
   ros::Publisher  home_pub    = n.advertise<enif_iuc::AgentHome>("agent_home_data", 1);
   ros::Publisher  local_pub   = n.advertise<enif_iuc::AgentLocal>("agent_local_data", 1);
   ros::Publisher  realTarget_pub  = n.advertise<enif_iuc::AgentSource>("agent_source_data", 1);
-  
   // Subscribe topics from onboard ROS and transmit it through Xbee
   ros::Subscriber sub_state   = n.subscribe("agentState",1,state_callback);
   ros::Subscriber sub_mps     = n.subscribe("mps_data",1,mps_callback);
@@ -296,8 +297,8 @@ int main(int argc, char **argv)
       if (!data.compare("<")){
 	data = USBPORT.read(1);
 	if (!data.compare("<")){
-	  // process data
 	  
+	  // process data	  
 	  data = USBPORT.read(2);	  
 	  char Tcharbuf[4] = {'\0'};
 	  char *Tbuf = Tcharbuf;
@@ -308,77 +309,92 @@ int main(int argc, char **argv)
 
 	  switch(command_type){
 	  case COMMAND_MPS:
-	    enif_iuc::AgentMPS agent_mps;
-	    char charbuf[256] = {'\0'};
-	    string command_data = USBPORT.read(MPS_LENGTH-2);
-	    strcpy(charbuf, command_data.c_str());
-	    char *buf = charbuf;
+	    {
+	      USBPORT.setTimeout(serial::Timeout::max(),100,0,100,0);// adjust timeout
+	      enif_iuc::AgentMPS agent_mps;
+	      char charbuf[256] = {'\0'};
+	      string command_data = USBPORT.read(MPS_LENGTH);
+	      strcpy(charbuf, command_data.c_str());
+	      char *buf = charbuf;
 
-	    //form mps and publish
-	    ROS_INFO_THROTTLE(1,"Receiving mps quad info from Agent %d", target_number);
+	      //form mps and publish
+	      ROS_INFO_THROTTLE(1,"Receiving mps quad info from Agent %d", target_number);
 	    
-	    if (checkEnd(buf, MPS_LENGTH-3)){
-	      get_other_mps(buf);
-	      agent_mps.agent_number = target_number;
-	      agent_mps.mps = mps_other;
-	      if(check_MPS(mps_other)){
-		mps_pub.publish(agent_mps);		
-	      }
-	    }
-	    else{
-	      ROS_INFO_THROTTLE(1,"no end data");
-	    }
-
-	    break;
-
-	    }
-	}
-      }
-	  /*
-	  case COMMAND_REALTARGET:
-	    if (target_number==100)
-	      {
-		//get source and publish
-		ROS_INFO_THROTTLE(1,"Receiving source point");
-		//cout<<"Receiving home quad info ";
-		checksum_result = checksum(buf);
-		get_realTarget(buf);
-
-		if(checkValue(realTarget.source.latitude,-180,180) && checkValue(realTarget.source.longitude,-180,180) && checkValue(realTarget.source.altitude,0,2000)){
-		  //publish the source position
-	
-		  //set the home location to be the same as the source location
-		  agent_home.home.header.stamp = ros::Time::now();		
-		  agent_home.home.geo.latitude = realTarget.source.latitude;
-		  agent_home.home.geo.longitude = realTarget.source.longitude;
-		  agent_home.home.geo.altitude = realTarget.source.altitude;
-		  NEW_REALTARGET = true;
+	      if (checkEnd(buf, MPS_LENGTH-1)){
+		get_other_mps(buf);
+		agent_mps.agent_number = target_number;
+		agent_mps.mps = mps_other;
+		if(check_MPS(mps_other)){
+		  mps_pub.publish(agent_mps);		
 		}
-		int tempbuf_size = package_length;
-		char tempbuf[tempbuf_size];
-		cut_buf(buf, tempbuf, tempbuf_size);
-		buf+=tempbuf_size;
-		tempbuf[1]=IntToChar(AGENT_NUMBER);
-		string send_data(tempbuf);
-		USBPORT.write(send_data);
-		//std::cout<<"sendingData"<<std::endl;
 	      }
+	      else{
+		ROS_INFO_THROTTLE(1,"no end data");
+	      }
+	    }
+	    break;
+	  case COMMAND_REALTARGET:
+	    {
+	      if (target_number==100)
+		{
+		  //get source and publish
+		  ROS_INFO_THROTTLE(1,"Receiving source point");
+		
+		  USBPORT.setTimeout(serial::Timeout::max(),100,0,100,0);// adjust timeout
+		  char charbuf[256] = {'\0'};
+		  string command_data = USBPORT.read(REALTARGET_LENGTH);
+		  strcpy(charbuf, command_data.c_str());
+		  char *buf = charbuf;
+
+		  if (checkEnd(buf,REALTARGET_LENGTH-1)){
+		    get_realTarget(buf);
+		    if(checkValue(realTarget.source.latitude,-180,180) && checkValue(realTarget.source.longitude,-180,180) && checkValue(targetE_other.source.altitude,0,2000)){
+		      //publish the source position       
+		      realTarget_pub.publish(realTarget);
+		      //home_pub.publish(agent_home);
+		
+		      char send_buf[256] = {'\0'};
+		      char start_buf[100] = {'\0'};
+		      form_start(start_buf);
+		  
+		      strcpy(send_buf, buf);
+		      send_buf[REALTARGET_LENGTH] = 0x0A;
+		  
+		      string start_data(start_buf);
+		      string send_data(send_buf);
+
+		      send_data.insert(0,start_data); // insert start << at beginning
+		      USBPORT.write(send_data);
+		    }
+		  }		
+		}
+	    }
 	    break;
 	  case COMMAND_TARGETE:
-	    //get source and publish
-	    ROS_INFO_THROTTLE(1,"Receiving target estimate");
-	    checksum_result = checksum(buf);
-	    get_targetE_other(buf);
-	  
-	    if(checkValue(targetE_other.source.latitude,-180,180) && checkValue(targetE_other.source.longitude,-180,180) && checkValue(targetE_other.source.altitude,0,2000)){
-	      // !=5000 filter targetE from pso
-	      targetE_other.agent_number = target_number;
-	      //publish the target estimate	
-	      mle_pub.publish(targetE_other);
-	    }	  
+	    {
+	      //get source and publish
+	      ROS_INFO_THROTTLE(1,"Receiving target estimate");
+	      USBPORT.setTimeout(serial::Timeout::max(),100,0,100,0);// adjust timeout
+	      char charbuf[256] = {'\0'};
+	      string command_data = USBPORT.read(TARGETE_LENGTH);
+	      strcpy(charbuf, command_data.c_str());
+	      char *buf = charbuf;
+
+	      if (checkEnd(buf,TARGETE_LENGTH-1)){
+		get_targetE_other(buf);
+		if(checkValue(targetE_other.source.latitude,-180,180) && checkValue(targetE_other.source.longitude,-180,180) && checkValue(targetE_other.source.altitude,0,2000)){		
+		  targetE_other.agent_number = target_number;
+		  mle_pub.publish(targetE_other);
+		}	      
+	      }
+	    }
 	    break;
 	  default:
 	    break;
+	  }
+	}
+      }
+	  /*
 	  }
 	  buf += package_length;
 	  if(command_type==COMMAND_WAYPOINT || command_type==COMMAND_TAKEOFF || command_type==COMMAND_BOX)
@@ -506,10 +522,6 @@ int main(int argc, char **argv)
 
     */
     
-    if (NEW_REALTARGET){
-      realTarget_pub.publish(realTarget);
-      home_pub.publish(agent_home);
-    }
     if (NEW_BOX){
       box_pub.publish(box);
     }    
