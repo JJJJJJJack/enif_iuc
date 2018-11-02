@@ -99,17 +99,17 @@ void battery_callback(const sensor_msgs::BatteryState &new_message)
 
 void form_mps(char* buf)
 {
-  buf[1] = IntToChar(AGENT_NUMBER);
-  buf[2] = IntToChar(COMMAND_MPS);
-  buf[3] = IntToChar(GAS_ID);
-  FloatToChar(buf+4, mps.percentLEL);
-  FloatToChar(buf+4+4, mps.temperature);
-  FloatToChar(buf+4+8, height.range);
-  FloatToChar(buf+4+12, mps.humidity);
-  DoubleToChar(buf+4+16, gps.latitude);
-  DoubleToChar(buf+4+24, gps.longitude);
-  DoubleToChar(buf+4+32, gps.altitude);
-  buf[4+40] = 0x0A;
+  buf[2] = IntToChar(AGENT_NUMBER);
+  buf[3] = IntToChar(COMMAND_MPS);
+  buf[4] = IntToChar(GAS_ID);
+  FloatToChar(buf+5, mps.percentLEL);
+  FloatToChar(buf+5+4, mps.temperature);
+  FloatToChar(buf+5+8, height.range);
+  FloatToChar(buf+5+12, mps.humidity);
+  DoubleToChar(buf+5+16, gps.latitude);
+  DoubleToChar(buf+5+24, gps.longitude);
+  DoubleToChar(buf+5+32, gps.altitude);
+  buf[5+40] = 0x0A;
   // Clear the percentLEL to make sure we don't pub wrong data when we get new GPS
 
   clearmps();
@@ -229,7 +229,7 @@ int main(int argc, char **argv)
   cout<<"sendHome: "<<sendHome<<endl;
   cout<<"sendBat: "<<sendBat<<endl;
   
-  ros::Rate loop_rate(100);
+  ros::Rate loop_rate(1000);
 
   // Set timeout for XBEE reading
   struct timeval tvstart, tvend, timeout;
@@ -246,7 +246,7 @@ int main(int argc, char **argv)
 
   // Start the USB serial port
   n.getParam("/enif_iuc_quad/USB", USB);
-  serial::Serial USBPORT(USB, 9600, serial::Timeout::simpleTimeout(100));
+  serial::Serial USBPORT(USB, 115200, serial::Timeout::simpleTimeout(1000));
   
   if(USBPORT.isOpen())
     cout<<"Wireless UART port opened"<<endl;
@@ -257,27 +257,201 @@ int main(int argc, char **argv)
   int waypoint_number = 0;
 
   while (ros::ok())
-  {
-    char charbuf[256] = {'\0'};
-    string data = USBPORT.read(256+1);
-    strcpy(charbuf, data.c_str());
-    char *buf = charbuf;
-    int command_type = get_command_type(buf);
+    {
+      data = USBPORT.read(1);
+
+      // check for start
+      if (!data.compare("<")){
+	data = USBPORT.read(1);
+	if (!data.compare("<")){
+	  // process data
+	  
+	  data = USBPORT.read(2);	  
+	  char Tcharbuf[4] = {'\0'};
+	  char *Tbuf = Tcharbuf;
+	  strcpy(Tcharbuf, data.c_str());
+
+	  int command_type = get_command_type(Tbuf);
+	  int target_number = get_target_number(Tbuf);
+
+	  switch(command_type){
+	  case COMMAND_MPS:
+	    enif_iuc::AgentMPS agent_mps;
+	    char charbuf[256] = {'\0'};
+	    string command_data = USBPORT.read(MPS_LENGTH-2);
+	    strcpy(charbuf, command_data.c_str());
+	    char *buf = charbuf;
+
+	    //form mps and publish
+	    ROS_INFO_THROTTLE(1,"Receiving mps quad info from Agent %d", target_number);
+	    
+	    if (checkEnd(buf, MPS_LENGTH-3)){
+	      get_other_mps(buf);
+	      agent_mps.agent_number = target_number;
+	      agent_mps.mps = mps_other;
+	      if(check_MPS(mps_other)){
+		mps_pub.publish(agent_mps);		
+	      }
+	    }
+	    else{
+	      ROS_INFO_THROTTLE(1,"no end data");
+	    }
+
+	    break;
+
+	    }
+	}
+      }
+	  /*
+	  case COMMAND_REALTARGET:
+	    if (target_number==100)
+	      {
+		//get source and publish
+		ROS_INFO_THROTTLE(1,"Receiving source point");
+		//cout<<"Receiving home quad info ";
+		checksum_result = checksum(buf);
+		get_realTarget(buf);
+
+		if(checkValue(realTarget.source.latitude,-180,180) && checkValue(realTarget.source.longitude,-180,180) && checkValue(realTarget.source.altitude,0,2000)){
+		  //publish the source position
+	
+		  //set the home location to be the same as the source location
+		  agent_home.home.header.stamp = ros::Time::now();		
+		  agent_home.home.geo.latitude = realTarget.source.latitude;
+		  agent_home.home.geo.longitude = realTarget.source.longitude;
+		  agent_home.home.geo.altitude = realTarget.source.altitude;
+		  NEW_REALTARGET = true;
+		}
+		int tempbuf_size = package_length;
+		char tempbuf[tempbuf_size];
+		cut_buf(buf, tempbuf, tempbuf_size);
+		buf+=tempbuf_size;
+		tempbuf[1]=IntToChar(AGENT_NUMBER);
+		string send_data(tempbuf);
+		USBPORT.write(send_data);
+		//std::cout<<"sendingData"<<std::endl;
+	      }
+	    break;
+	  case COMMAND_TARGETE:
+	    //get source and publish
+	    ROS_INFO_THROTTLE(1,"Receiving target estimate");
+	    checksum_result = checksum(buf);
+	    get_targetE_other(buf);
+	  
+	    if(checkValue(targetE_other.source.latitude,-180,180) && checkValue(targetE_other.source.longitude,-180,180) && checkValue(targetE_other.source.altitude,0,2000)){
+	      // !=5000 filter targetE from pso
+	      targetE_other.agent_number = target_number;
+	      //publish the target estimate	
+	      mle_pub.publish(targetE_other);
+	    }	  
+	    break;
+	  default:
+	    break;
+	  }
+	  buf += package_length;
+	  if(command_type==COMMAND_WAYPOINT || command_type==COMMAND_TAKEOFF || command_type==COMMAND_BOX)
+	    break;
+	}
+      }else{
+	// Get command type
+	cout<<"Receiving command: ";
+	bool checksum_result = false;
+	switch(command_type){
+	case COMMAND_WAYPOINT:{
+	  // Publish waypoint
+	  cout<< " Waypoint"<<endl;
+	  waypoint_list.mission_waypoint.clear();
+	  waypoint_number = get_waypoint_number(buf);
+	  get_waypoint_info(buf, waypoint_list);
+	  get_waypoints(waypoint_number, buf, waypoint_list);
+	  checksum_result = checksum(buf);
+	  cout<<waypoint_list<<endl;
+
+	  int tempbuf_size = package_length;
+	  char tempbuf[tempbuf_size];
+	  cut_buf(buf, tempbuf, tempbuf_size);
+	  buf+=tempbuf_size;
+	  string send_data(tempbuf);
+	  USBPORT.write(send_data);
+	  buf += tempbuf_size;
+	  break;
+	}
+	case COMMAND_BOX:{
+	  cout<< " Box"<<endl;
+	  box.data.clear();
+	  NEW_BOX = get_box(buf, box);
+	  checksum_result = checksum(buf);
+	  cout<<box<<endl;
+	  int tempbuf_size = package_length;
+	  char tempbuf[tempbuf_size];
+	  cut_buf(buf, tempbuf, tempbuf_size);
+	  buf+=tempbuf_size;
+	  string send_data(tempbuf);
+	  USBPORT.write(send_data);
+	  break;
+	}
+	case COMMAND_TAKEOFF:{
+	  std_msgs::Bool cmd = get_takeoff_command(buf, alg);
+
+	  switch (alg.data) {
+	  case 0 :
+	    n.setParam("/runAlg", "Waypoint");
+	    break;
+	  case 1 :	  
+	    n.setParam("/runAlg", "lawnMower");
+	    break;
+	  case 2 :
+	    n.setParam("/runAlg", "PSO");
+	    break;
+	  case 3 :
+	    n.setParam("/runAlg", "PF");
+	    break;
+	  default :
+	    n.setParam("/runAlg", "lawnMower");
+	  }
+
+	  takeoff_command.data = cmd.data;
+	  if(takeoff_command.data == true)
+	    cout<< " Takeoff"<<endl;
+	  else
+	    cout<< " Land"<<endl;
+	  checksum_result = checksum(buf);
+	  int tempbuf_size = package_length;
+	  char tempbuf[tempbuf_size];
+	  cut_buf(buf, tempbuf, tempbuf_size);
+	  buf+=tempbuf_size;
+	  string send_data(tempbuf);
+	  USBPORT.write(send_data);
+	  break;
+	}
+	default:
+	  break;
+	}
+	//if(checksum_result)
+	{
+	  if(command_type == COMMAND_WAYPOINT)
+	    wp_pub.publish(waypoint_list);
+	  if(command_type == COMMAND_TAKEOFF)
+	    takeoff_pub.publish(takeoff_command);
+	  //if(command_type == COMMAND_BOX)
+	  //  box_pub.publish(box);
+	}
+
+	  
+	}
+      }
+    }
+
+
+
     int c = 0;
-    while(buf[0] != '\0' && (command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_BOX || command_type==COMMAND_TAKEOFF || command_type==COMMAND_WAYPOINT) || command_type==COMMAND_REALTARGET || command_type==COMMAND_TARGETE){
-      command_type = get_command_type(buf);
-      //      cout<<strlen(buf)<<endl;
-      //RnnnnnnOS_INFO_THROTTLE(1,"%d",strlen(buf));
-      //printf("%x\n", buf[0]);
-    // Get the target number first
-    int target_number = get_target_number(buf);
 
     if(target_number != AGENT_NUMBER){
       if(target_number > 0){
 	// Get command type
 
 	bool checksum_result = false;
-	enif_iuc::AgentMPS agent_mps;
+
 	enif_iuc::AgentLocal agent_local;
 	
 	sensor_msgs::NavSatFix my_gps = gps;
@@ -286,156 +460,6 @@ int main(int argc, char **argv)
 	mavros_msgs::HomePosition my_home;
 	nav_msgs::Odometry my_local = local;
 
-	switch(command_type){
-	case COMMAND_MPS:
-	  //form mps and publish
-	  //cout<<"Receiving mps quad info ";
-	  ROS_INFO_THROTTLE(1,"Receiving mps quad info from Agent %d", target_number);
-	  checksum_result = checksum(buf);
-	  get_other_mps(buf);
-	  agent_mps.agent_number = target_number;
-	  agent_mps.mps = mps_other;
-	  if(check_MPS(mps_other)){
-	    mps_pub.publish(agent_mps);
-	  }
-	  if(NEW_MPS){
-	    mps = my_mps; gps = my_gps;
-	  }
-	  //cout<<"from Agent."<<target_number<<endl;
-	  break;
-	case COMMAND_REALTARGET:
-	  if (target_number==100)
-	    {
-	      //get source and publish
-	      ROS_INFO_THROTTLE(1,"Receiving source point");
-	      //cout<<"Receiving home quad info ";
-	      checksum_result = checksum(buf);
-	      get_realTarget(buf);
-
-	      if(checkValue(realTarget.source.latitude,-180,180) && checkValue(realTarget.source.longitude,-180,180) && checkValue(realTarget.source.altitude,0,2000)){
-		//publish the source position
-	
-		//set the home location to be the same as the source location
-		agent_home.home.header.stamp = ros::Time::now();		
-		agent_home.home.geo.latitude = realTarget.source.latitude;
-		agent_home.home.geo.longitude = realTarget.source.longitude;
-		agent_home.home.geo.altitude = realTarget.source.altitude;
-		NEW_REALTARGET = true;
-	      }
-	      int tempbuf_size = package_length;
-	      char tempbuf[tempbuf_size];
-	      cut_buf(buf, tempbuf, tempbuf_size);
-	      buf+=tempbuf_size;
-	      tempbuf[1]=IntToChar(AGENT_NUMBER);
-	      string send_data(tempbuf);
-	      USBPORT.write(send_data);
-	      //std::cout<<"sendingData"<<std::endl;
-	    }
-	  break;
-	case COMMAND_TARGETE:
-	  //get source and publish
-	  ROS_INFO_THROTTLE(1,"Receiving target estimate");
-	  checksum_result = checksum(buf);
-	  get_targetE_other(buf);
-	  
-	  if(checkValue(targetE_other.source.latitude,-180,180) && checkValue(targetE_other.source.longitude,-180,180) && checkValue(targetE_other.source.altitude,0,2000)){
-	    // !=5000 filter targetE from pso
-	    targetE_other.agent_number = target_number;
-	    //publish the target estimate	
-	    mle_pub.publish(targetE_other);
-	  }	  
-	  break;
-	default:
-	  break;
-	}
-	buf += package_length;
-	if(command_type==COMMAND_WAYPOINT || command_type==COMMAND_TAKEOFF || command_type==COMMAND_BOX)
-	  break;
-      }
-    }else{
-      // Get command type
-      cout<<"Receiving command: ";
-      bool checksum_result = false;
-      switch(command_type){
-      case COMMAND_WAYPOINT:{
-	// Publish waypoint
-	cout<< " Waypoint"<<endl;
-	waypoint_list.mission_waypoint.clear();
-	waypoint_number = get_waypoint_number(buf);
-	get_waypoint_info(buf, waypoint_list);
-	get_waypoints(waypoint_number, buf, waypoint_list);
-	checksum_result = checksum(buf);
-	cout<<waypoint_list<<endl;
-
-	int tempbuf_size = package_length;
-	char tempbuf[tempbuf_size];
-	cut_buf(buf, tempbuf, tempbuf_size);
-	buf+=tempbuf_size;
-	string send_data(tempbuf);
-	USBPORT.write(send_data);
-	buf += tempbuf_size;
-	break;
-      }
-      case COMMAND_BOX:{
-	cout<< " Box"<<endl;
-	box.data.clear();
-	NEW_BOX = get_box(buf, box);
-	checksum_result = checksum(buf);
-	cout<<box<<endl;
-	int tempbuf_size = package_length;
-	char tempbuf[tempbuf_size];
-	cut_buf(buf, tempbuf, tempbuf_size);
-	buf+=tempbuf_size;
-	string send_data(tempbuf);
-	USBPORT.write(send_data);
-	break;
-      }
-      case COMMAND_TAKEOFF:{
-	std_msgs::Bool cmd = get_takeoff_command(buf, alg);
-
-	switch (alg.data) {
-	case 0 :
-	  n.setParam("/runAlg", "Waypoint");
-	  break;
-	case 1 :	  
-	  n.setParam("/runAlg", "lawnMower");
-	  break;
-	case 2 :
-	  n.setParam("/runAlg", "PSO");
-	  break;
-	case 3 :
-	  n.setParam("/runAlg", "PF");
-	  break;
-	default :
-	  n.setParam("/runAlg", "lawnMower");
-	}
-
-	takeoff_command.data = cmd.data;
-	if(takeoff_command.data == true)
-	  cout<< " Takeoff"<<endl;
-	else
-	  cout<< " Land"<<endl;
-	checksum_result = checksum(buf);
-	int tempbuf_size = package_length;
-	char tempbuf[tempbuf_size];
-	cut_buf(buf, tempbuf, tempbuf_size);
-	buf+=tempbuf_size;
-	string send_data(tempbuf);
-	USBPORT.write(send_data);
-	break;
-      }
-      default:
-	break;
-      }
-      //if(checksum_result)
-      {
-	if(command_type == COMMAND_WAYPOINT)
-	  wp_pub.publish(waypoint_list);
-	if(command_type == COMMAND_TAKEOFF)
-	  takeoff_pub.publish(takeoff_command);
-	//if(command_type == COMMAND_BOX)
-	//  box_pub.publish(box);
-      }
     }
     c++;
     if (c>50)
@@ -443,6 +467,8 @@ int main(int argc, char **argv)
 	break;
       }
     }
+
+    */
     
     if (NEW_REALTARGET){
       realTarget_pub.publish(realTarget);
@@ -453,44 +479,37 @@ int main(int argc, char **argv)
     }
     
 
+    ros::Time start = ros::Time::now();
     // Send GPS mps state and battery data every 1 sec
-    if(count%2 == 0)
-      {
 	char send_buf[256] = {'\0'};
-	switch(send_count){
-	case 0:
-	  if(NEW_GPS){
+	if(NEW_GPS){
+	    form_start(send_buf);
 	    form_mps(send_buf);
-	    form_checksum(send_buf);
-	    string send_data(send_buf);
-	    USBPORT.write(send_data);
+	    //form_checksum(send_buf);
+	    string send_data(send_buf);	    
+	    USBPORT.write(send_data);	    
 	    NEW_GPS = false;
 	  }
-	  break;
-	case 1:
-	  if(NEW_STATE){
+	
+	if(NEW_STATE){
 	    form_state(send_buf);
 	    form_checksum(send_buf);
 	    string send_data(send_buf);
 	    USBPORT.write(send_data);
 	    NEW_STATE = false;
 	  }
-	  break;
-	case 2:
-	  if(NEW_TARGETE && sendTargetE){	    
+
+	if(NEW_TARGETE && sendTargetE){	    
 	    form_targetE(send_buf);
 	    form_checksum(send_buf);	    
 	    string send_data(send_buf);	    
 	    USBPORT.write(send_data);
 	    NEW_TARGETE = false;	    
 	  }
-	  break;
-	default:
-	  break;
-	}
-	if(send_count <= 2) send_count++;
-	else send_count = 0;       
-      }
+
+    ros::Time end = ros::Time::now();
+    ROS_INFO_THROTTLE(1, "time to transmit: %f", (end.toSec() - start.toSec()));
+    //    cout<<"time to transmit: "<< (end.toSec() - start.toSec())<<endl;
     
     //Check Error messages
     current_time_sec = ros::Time::now().toSec();
@@ -510,7 +529,7 @@ int main(int argc, char **argv)
       ERROR_MPS = true;
     
     ros::spinOnce();
-    loop_rate.sleep();
+    //loop_rate.sleep();
     ++count;
 
   }

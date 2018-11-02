@@ -57,6 +57,8 @@ using namespace std;
 #define COMMAND_TARGETE    11
 #define COMMAND_REALTARGET 12
 
+#define MPS_LENGTH       44
+
 #define GAS_NONE    0
 #define GAS_PROPANE 1
 #define GAS_METHANE 2
@@ -72,6 +74,9 @@ bool sendBat   = false;
 bool sendHome  = true;
 bool sendRealTarget = true;
 bool sendTargetE = true;
+
+string data;    
+
 
 std::string USB;
 int AGENT_NUMBER = 0;
@@ -178,15 +183,16 @@ void CharToFloat(char* buf, float &number)
 
 int get_target_number(char* buf)
 {
-  int number = CharToInt(buf[1]);
+  int number = CharToInt(buf[0]);
   return number;
 }
 
 int get_command_type(char* buf)
 {
-  int number = CharToInt(buf[2]);
+  int number = CharToInt(buf[1]);
   return number;
 }
+
 
 bool checksum(char* buf)
 {
@@ -209,6 +215,19 @@ void form_checksum(char* buf)
     sum += buf[i];
   }
   buf[0] = sum;
+}
+
+void form_start(char* buf)
+{
+  buf[0] = 0x3C;
+  buf[1] = 0x3C;
+}
+
+bool checkEnd(char* buf, int len){  
+  if (buf[len]==0x0A){
+    return true;
+  }
+  return false;
 }
 
 std_msgs::Bool get_takeoff_command(char* buf, std_msgs::Int8 &newAlg)
@@ -399,7 +418,7 @@ bool checkLocal(nav_msgs::Odometry mylocal)
 
 void get_mps(char* buf)
 {
-  GAS_ID = CharToInt(buf[3]);
+  GAS_ID = CharToInt(buf[0]);
   if(GAS_ID == GAS_PROPANE){
     string str = "Propane";
     mps.gasID = str;
@@ -412,19 +431,19 @@ void get_mps(char* buf)
   }
   float percentLEL, temperature, local_height, humidity;
   double GPS_latitude, GPS_longitude, GPS_altitude;
-  CharToFloat(buf+4, percentLEL);
+  CharToFloat(buf+1, percentLEL);
   mps.percentLEL = percentLEL;
-  CharToFloat(buf+4+4, temperature);
+  CharToFloat(buf+1+4, temperature);
   mps.temperature = temperature;
-  CharToFloat(buf+4+8, local_height);
+  CharToFloat(buf+1+8, local_height);
   mps.local_z = local_height;
-  CharToFloat(buf+4+12, humidity);
+  CharToFloat(buf+1+12, humidity);
   mps.humidity = humidity;
-  CharToDouble(buf+4+16, GPS_latitude);
+  CharToDouble(buf+1+16, GPS_latitude);
   mps.GPS_latitude = GPS_latitude;
-  CharToDouble(buf+4+24, GPS_longitude);
+  CharToDouble(buf+1+24, GPS_longitude);
   mps.GPS_longitude = GPS_longitude;
-  CharToDouble(buf+4+32, GPS_altitude);
+  CharToDouble(buf+1+32, GPS_altitude);
   mps.GPS_altitude = GPS_altitude;
 
   package_length = 45;  
@@ -432,7 +451,7 @@ void get_mps(char* buf)
 
 void get_other_mps(char* buf)
 {
-  GAS_ID = CharToInt(buf[3]);
+  GAS_ID = CharToInt(buf[1]);
   if(GAS_ID == GAS_PROPANE){
     string str = "Propane";
     mps_other.gasID = str;
@@ -445,19 +464,19 @@ void get_other_mps(char* buf)
   }
   float percentLEL, temperature, local_height, humidity;
   double GPS_latitude, GPS_longitude, GPS_altitude;
-  CharToFloat(buf+4, percentLEL);
+  CharToFloat(buf+1, percentLEL);
   mps_other.percentLEL = percentLEL;
-  CharToFloat(buf+4+4, temperature);
+  CharToFloat(buf+1+4, temperature);
   mps_other.temperature = temperature;
-  CharToFloat(buf+4+8, local_height);
+  CharToFloat(buf+1+8, local_height);
   mps_other.local_z = local_height;
-  CharToFloat(buf+4+12, humidity);
+  CharToFloat(buf+1+12, humidity);
   mps_other.humidity = humidity;
-  CharToDouble(buf+4+16, GPS_latitude);
+  CharToDouble(buf+1+16, GPS_latitude);
   mps_other.GPS_latitude = GPS_latitude;
-  CharToDouble(buf+4+24, GPS_longitude);
+  CharToDouble(buf+1+24, GPS_longitude);
   mps_other.GPS_longitude = GPS_longitude;
-  CharToDouble(buf+4+32, GPS_altitude);
+  CharToDouble(buf+1+32, GPS_altitude);
   mps_other.GPS_altitude = GPS_altitude;
 
   package_length = 45;
