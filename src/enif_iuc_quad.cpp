@@ -23,6 +23,8 @@ GPS   Lidar  CA   Alt  MPS  | agentState
 
 ---------------------------------------------*/
 
+serial::Serial USBPORT("/dev/xbee", 9600, serial::Timeout::simpleTimeout(1000));
+
 using namespace std;
 
 void state_callback(const std_msgs::UInt8 &new_message)
@@ -187,6 +189,33 @@ void form_battery(char* buf)
   buf[7] = 0x0A;
 }
 
+void transmitData(const ros::TimerEvent& event)
+{
+  char send_buf[256] = {'\0'};
+  if(NEW_GPS){
+    form_start(send_buf);
+    form_mps(send_buf);
+    //form_checksum(send_buf);
+    string send_data(send_buf);	    
+    USBPORT.write(send_data);	    
+    NEW_GPS = false;
+  }	
+  if(NEW_STATE){
+    form_state(send_buf);
+    form_checksum(send_buf);
+    string send_data(send_buf);
+    USBPORT.write(send_data);
+    NEW_STATE = false;
+  }
+  if(NEW_TARGETE && sendTargetE){	    
+    form_targetE(send_buf);
+    form_checksum(send_buf);	    
+    string send_data(send_buf);	    
+    USBPORT.write(send_data);
+    NEW_TARGETE = false;	    
+  } 
+}
+
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "enif_iuc_quad");
@@ -217,6 +246,9 @@ int main(int argc, char **argv)
   ros::Subscriber sub_lidar   = n.subscribe("/scan",1,lidar_callback);
   ros::Subscriber sub_CA      = n.subscribe("/cmd_vel",1,CA_callback);
 
+  ros::Timer transmit_timer   = n.createTimer(ros::Duration(.01), transmitData);
+  
+  
   n.getParam("/enif_iuc_quad/AGENT_NUMBER", AGENT_NUMBER);
   cout<<"This is Agent No."<<AGENT_NUMBER<<endl;
   
@@ -245,8 +277,8 @@ int main(int argc, char **argv)
   CA_update_sec = current_time_sec;
 
   // Start the USB serial port
-  n.getParam("/enif_iuc_quad/USB", USB);
-  serial::Serial USBPORT(USB, 115200, serial::Timeout::simpleTimeout(1000));
+  //n.getParam("/enif_iuc_quad/USB", USB);
+  
   
   if(USBPORT.isOpen())
     cout<<"Wireless UART port opened"<<endl;
@@ -381,13 +413,17 @@ int main(int argc, char **argv)
 	  box.data.clear();
 	  NEW_BOX = get_box(buf, box);
 	  checksum_result = checksum(buf);
-	  cout<<box<<endl;
-	  int tempbuf_size = package_length;
-	  char tempbuf[tempbuf_size];
-	  cut_buf(buf, tempbuf, tempbuf_size);
-	  buf+=tempbuf_size;
-	  string send_data(tempbuf);
-	  USBPORT.write(send_data);
+
+	  get_targetE_other(buf);
+	  
+	  if(checkValue(targetE_other.source.latitude,-180,180) && checkValue(targetE_other.source.longitude,-180,180)){
+	    // !=5000 filter targetE from pso
+	    targetE_other.agent_number = target_number;
+	    //publish the target estimate	
+	    mle_pub.publish(targetE_other);
+	  }	  
+	  break;
+	default:
 	  break;
 	}
 	case COMMAND_TAKEOFF:{
@@ -476,40 +512,10 @@ int main(int argc, char **argv)
     }
     if (NEW_BOX){
       box_pub.publish(box);
-    }
-    
+    }    
 
     ros::Time start = ros::Time::now();
     // Send GPS mps state and battery data every 1 sec
-	char send_buf[256] = {'\0'};
-	if(NEW_GPS){
-	    form_start(send_buf);
-	    form_mps(send_buf);
-	    //form_checksum(send_buf);
-	    string send_data(send_buf);	    
-	    USBPORT.write(send_data);	    
-	    NEW_GPS = false;
-	  }
-	
-	if(NEW_STATE){
-	    form_state(send_buf);
-	    form_checksum(send_buf);
-	    string send_data(send_buf);
-	    USBPORT.write(send_data);
-	    NEW_STATE = false;
-	  }
-
-	if(NEW_TARGETE && sendTargetE){	    
-	    form_targetE(send_buf);
-	    form_checksum(send_buf);	    
-	    string send_data(send_buf);	    
-	    USBPORT.write(send_data);
-	    NEW_TARGETE = false;	    
-	  }
-
-    ros::Time end = ros::Time::now();
-    ROS_INFO_THROTTLE(1, "time to transmit: %f", (end.toSec() - start.toSec()));
-    //    cout<<"time to transmit: "<< (end.toSec() - start.toSec())<<endl;
     
     //Check Error messages
     current_time_sec = ros::Time::now().toSec();
