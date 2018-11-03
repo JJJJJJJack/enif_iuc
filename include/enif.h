@@ -60,6 +60,8 @@ using namespace std;
 #define MPS_LENGTH        42
 #define REALTARGET_LENGTH 45
 #define TARGETE_LENGTH    45
+#define BOX_LENGTH        46
+#define TAKEOFF_LENGTH    1
 
 #define GAS_NONE    0
 #define GAS_PROPANE 1
@@ -235,7 +237,7 @@ bool checkEnd(char* buf, int len){
 std_msgs::Bool get_takeoff_command(char* buf, std_msgs::Int8 &newAlg)
 {
   std_msgs::Bool result;
-  uint8_t takeoff_newAlg = CharToInt(buf[3]);
+  uint8_t takeoff_newAlg = CharToInt(buf[0]);
   if(takeoff_newAlg >= 100)
     result.data = true;
   else
@@ -248,15 +250,15 @@ std_msgs::Bool get_takeoff_command(char* buf, std_msgs::Int8 &newAlg)
 
 int get_waypoint_number(char* buf)
 {
-  return CharToInt(buf[3]);
+  return CharToInt(buf[0]);
 }
 
 void get_waypoint_info(char* buf, enif_iuc::WaypointTask &waypoint_list)
 {
   double velocity, damping_distance;
-  CharToDouble(buf+4, velocity);
+  CharToDouble(buf+1, velocity);
   waypoint_list.velocity = velocity;
-  CharToDouble(buf+12, damping_distance);
+  CharToDouble(buf+9, damping_distance);
   waypoint_list.damping_distance = damping_distance;
 }
 
@@ -264,7 +266,7 @@ int get_waypointlist_buf_size(int waypoint_number)
 {
   int buf_size = 0;
   //20 bytes of wp info + 25 bytes per waypoint
-  buf_size = 20+25*waypoint_number;
+  buf_size = 17+25*waypoint_number;
   return buf_size;
 }
 
@@ -278,24 +280,24 @@ void get_waypoints(int waypoint_number, char* buf, enif_iuc::WaypointTask &waypo
       double latitude, longitude, target_height;
       int staytime;
       // Get latitude
-      CharToDouble(buf+20+byte_number, latitude);
+      CharToDouble(buf+17+byte_number, latitude);
       waypoint.latitude = latitude;
       byte_number += sizeof(double);
       // Get longitude
-      CharToDouble(buf+20+byte_number, longitude);
+      CharToDouble(buf+17+byte_number, longitude);
       waypoint.longitude = longitude;
       byte_number += sizeof(double);
       // Get waypoint height
-      CharToDouble(buf+20+byte_number, target_height);
+      CharToDouble(buf+17+byte_number, target_height);
       waypoint.target_height = target_height;
       byte_number += sizeof(double);
       // Get staytime
-      waypoint.staytime = CharToInt(buf[20+byte_number]);
+      waypoint.staytime = CharToInt(buf[17+byte_number]);
       byte_number++;
       waypoint_list.mission_waypoint.push_back(waypoint);
     }
-  int waypt_num = get_waypoint_number(buf);
-  package_length = get_waypointlist_buf_size(waypt_num)+1;
+  //int waypt_num = get_waypoint_number(buf);
+  //package_length = get_waypointlist_buf_size(waypt_num)+1;
 }
 
 void cut_buf(char* buf_0, char* buf_1, int size)
@@ -311,17 +313,17 @@ bool get_box(char* buf, std_msgs::Float64MultiArray &box)
   double latitude, longitude, width, height, angle;
   double staytime, wp_height, velocity, wp_radius;
   double stepwidth, stepheight;
-  CharToDouble(buf+3,  longitude);
-  CharToDouble(buf+11, latitude);
-  CharToDouble(buf+19, width);
-  CharToDouble(buf+27, height);
-  CharToDouble(buf+35, angle);
-  staytime   = CharToInt(buf[43]);
-  wp_height  = CharToInt(buf[44])/20.0;
-  velocity   = CharToInt(buf[45]);
-  wp_radius  = CharToInt(buf[46]);
-  stepwidth  = CharToInt(buf[47]);
-  stepheight = CharToInt(buf[48]);
+  CharToDouble(buf,  longitude);
+  CharToDouble(buf+8, latitude);
+  CharToDouble(buf+16, width);
+  CharToDouble(buf+24, height);
+  CharToDouble(buf+32, angle);
+  staytime   = CharToInt(buf[40]);
+  wp_height  = CharToInt(buf[41])/20.0;
+  velocity   = CharToInt(buf[42]);
+  wp_radius  = CharToInt(buf[43]);
+  stepwidth  = CharToInt(buf[44]);
+  stepheight = CharToInt(buf[45]);
 
   package_length = 50;
 
