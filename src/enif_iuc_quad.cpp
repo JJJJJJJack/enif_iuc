@@ -175,10 +175,10 @@ void form_state(char* buf)
 {
   //Adding error info into state
   int error_info = ERROR_GPS<<7 | ERROR_LIDAR<<6 | ERROR_CA<<5 | ERROR_ALTITUDE<<4 | ERROR_MPS<<3 | state.data;
-  buf[1] = IntToChar(AGENT_NUMBER);
-  buf[2] = IntToChar(COMMAND_STATE);
-  buf[3] = IntToChar(error_info);
-  buf[4] = 0x0A;
+  buf[2] = IntToChar(AGENT_NUMBER);
+  buf[3] = IntToChar(COMMAND_STATE);
+  buf[4] = IntToChar(error_info);
+  buf[5] = 0x0A;
 }
 
 void form_battery(char* buf)
@@ -192,8 +192,8 @@ void form_battery(char* buf)
 void transmitData(const ros::TimerEvent& event)
 {
   char send_buf[256] = {'\0'};
+  form_start(send_buf);
   if(NEW_GPS){
-    form_start(send_buf);
     form_mps(send_buf);
     //form_checksum(send_buf);
     string send_data(send_buf);	    
@@ -201,7 +201,6 @@ void transmitData(const ros::TimerEvent& event)
     NEW_GPS = false;
   }	
   if(NEW_STATE){
-    form_start(send_buf);
     form_state(send_buf);
     //form_checksum(send_buf);
     string send_data(send_buf);
@@ -209,7 +208,6 @@ void transmitData(const ros::TimerEvent& event)
     NEW_STATE = false;
   }
   if(NEW_TARGETE && sendTargetE){
-    form_start(send_buf);
     form_targetE(send_buf);
     //form_checksum(send_buf);	    
     string send_data(send_buf);	    
@@ -247,7 +245,7 @@ int main(int argc, char **argv)
   ros::Subscriber sub_lidar   = n.subscribe("/scan",1,lidar_callback);
   ros::Subscriber sub_CA      = n.subscribe("/cmd_vel",1,CA_callback);
 
-  ros::Timer transmit_timer   = n.createTimer(ros::Duration(.01), transmitData);
+  ros::Timer transmit_timer   = n.createTimer(ros::Duration(.2), transmitData);
   
   
   n.getParam("/enif_iuc_quad/AGENT_NUMBER", AGENT_NUMBER);
@@ -384,7 +382,7 @@ int main(int argc, char **argv)
 
 	      if (checkEnd(buf,TARGETE_LENGTH-1)){
 		get_targetE_other(buf);
-		if(checkValue(targetE_other.source.latitude,-180,180) && checkValue(targetE_other.source.longitude,-180,180) && checkValue(targetE_other.source.altitude,0,2000)){		
+		if(checkValue(targetE_other.source.latitude,-180,180) && checkValue(targetE_other.source.longitude,-180,180) && checkValue(targetE_other.source.altitude,0,2000)){ 
 		  targetE_other.agent_number = target_number;
 		  mle_pub.publish(targetE_other);
 		}	      

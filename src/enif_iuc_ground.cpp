@@ -26,6 +26,8 @@ bool box_checked[256] = {true, true, true, true, true};
 bool takeoff_checked[256] = {true, true, true, true, true};
 bool source_checked[256] = {true, true, true, true, true};
 
+serial::Serial USBPORT("/dev/xbee", 9600, serial::Timeout::simpleTimeout(100));
+
 using namespace std;
 
 bool check_takeoff(std_msgs::Bool sendtakeoff, std_msgs::Bool responsetakeoff)
@@ -34,6 +36,73 @@ bool check_takeoff(std_msgs::Bool sendtakeoff, std_msgs::Bool responsetakeoff)
   if(sendtakeoff.data != responsetakeoff.data)
     return false;
   return true;
+}
+
+void form_realTarget(char* buf, int agent_number, enif_iuc::AgentSource sendSource)
+{
+  buf[2] = IntToChar(agent_number);
+  buf[3] = IntToChar(COMMAND_REALTARGET);  
+  DoubleToChar(buf+4, sendSource.source.latitude);
+  DoubleToChar(buf+12, sendSource.source.longitude);
+  DoubleToChar(buf+20, sendSource.source.altitude);
+  FloatToChar(buf+28, sendSource.angle);
+  FloatToChar(buf+32, sendSource.wind_speed);
+  FloatToChar(buf+36, sendSource.diff_y);
+  FloatToChar(buf+40,sendSource.diff_z);
+  FloatToChar(buf+44,sendSource.release_rate);
+  buf[48] = 0x0A;
+}
+
+void form_takeoff(char* buf, int agent_number, std_msgs::Bool takeoff)
+{
+  buf[2] = IntToChar(agent_number);
+  buf[3] = IntToChar(COMMAND_TAKEOFF);
+  buf[4] = IntToChar(takeoff.data*100 + alg.data);
+  buf[5] = 0x0A;
+}
+
+void form_waypoint_info(char* buf, int agent_number, int waypoint_number, enif_iuc::WaypointTask &waypoint_list)
+{
+  buf[2] = IntToChar(agent_number);
+  buf[3] = IntToChar(COMMAND_WAYPOINT);
+  buf[4] = IntToChar(waypoint_number);
+  DoubleToChar(buf+5, waypoint_list.velocity);
+  DoubleToChar(buf+13, waypoint_list.damping_distance);
+}
+
+void form_waypoints(char* buf, int waypoint_number, enif_iuc::WaypointTask &waypoint_list)
+{
+  int byte_number = 0;
+  for(int i=0; i<waypoint_number; i++)
+    {
+      DoubleToChar(buf+21+byte_number, waypoint_list.mission_waypoint[i].latitude);
+      byte_number += sizeof(double);
+      DoubleToChar(buf+21+byte_number, waypoint_list.mission_waypoint[i].longitude);
+      byte_number += sizeof(double);
+      DoubleToChar(buf+21+byte_number, waypoint_list.mission_waypoint[i].target_height);
+      byte_number += sizeof(double);
+      buf[21+byte_number] = IntToChar(waypoint_list.mission_waypoint[i].staytime);
+      byte_number++;
+    }
+  buf[21+byte_number] = 0x0A;
+}
+
+void form_box(char* buf, int agent_number, std_msgs::Float64MultiArray &box)
+{
+  buf[2] = IntToChar(agent_number);
+  buf[3] = IntToChar(COMMAND_BOX);
+  DoubleToChar(buf+4,  box.data[0]);
+  DoubleToChar(buf+12, box.data[1]);
+  DoubleToChar(buf+20, box.data[2]);
+  DoubleToChar(buf+28, box.data[3]);
+  DoubleToChar(buf+36, box.data[4]);
+  buf[44] = IntToChar((int)box.data[5]);
+  buf[45] = IntToChar((int)(box.data[6]*20.0));
+  buf[46] = IntToChar((int)box.data[7]);
+  buf[47] = IntToChar((int)box.data[8]);
+  buf[48] = IntToChar((int)box.data[9]);
+  buf[49] = IntToChar((int)box.data[10]);
+  buf[50] = 0x0A;
 }
 
 bool check_alg(std_msgs::Int8 sendAlg, std_msgs::Int8 responseAlg)
@@ -167,6 +236,17 @@ void takeoff_callback(const enif_iuc::AgentTakeoff &new_message)
       agent_takeoff[agent_number_takeoff] = new_message;
       takeoff_checked[agent_number_takeoff] = false;
     }
+
+  if(takeoff_checked[agent_number_takeoff] == false && agent_number_takeoff > 0)
+    {
+      char send_buf[256] = {'\0'};
+      form_start(send_buf);
+      form_takeoff(send_buf, agent_number_takeoff, agent_takeoff[agent_number_takeoff].takeoff_command);
+      string send_data(send_buf);
+      USBPORT.write(send_data);
+      cout<<"Send takoff command to agent "<<agent_number_takeoff<<endl;
+    }
+  
 }
 
 void wp_callback(const enif_iuc::AgentWaypointTask &new_message)
@@ -178,6 +258,20 @@ void wp_callback(const enif_iuc::AgentWaypointTask &new_message)
       agent_wp[agent_number_wp] = new_message;
       waypoint_checked[agent_number_wp] = false;
     }
+  
+  if(waypoint_checked[agent_number_wp] == false && agent_number_wp > 0)
+    {
+      char send_buf[256] = {'\0'};
+      form_start(send_buf);
+
+      form_waypoint_info(send_buf, agent_wp[agent_number_wp].agent_number, agent_wp[agent_number_wp].waypoint_list.mission_waypoint.size(), agent_wp[agent_number_wp].waypoint_list);
+      form_waypoints(send_buf, agent_wp[agent_number_wp].waypoint_list.mission_waypoint.size(), agent_wp[agent_number_wp].waypoint_list);
+
+      string send_data(send_buf);
+      USBPORT.write(send_data);
+      cout<<"send waypoint to agent "<<agent_number_wp<<endl;
+    }
+  
 }
 
 void realTarget_callback(const enif_iuc::AgentSource &new_message){
@@ -189,6 +283,18 @@ void realTarget_callback(const enif_iuc::AgentSource &new_message){
     agent_source[agent_number_source] = new_message;
     source_checked[agent_number_source] = false;
   }
+
+  if(source_checked[agent_number_source] == false && agent_number_source > 0)
+    {
+      char send_buf[256] = {'\0'};
+      form_start(send_buf);
+
+      form_realTarget(send_buf, 100, agent_source[agent_number_source]); // broadcast
+      string send_data(send_buf);
+      USBPORT.write(send_data);
+      cout<<"Send source command to agent "<<agent_number_source<<endl;
+    }
+
 }
 
 void box_callback(const enif_iuc::AgentBox &new_message)
@@ -200,11 +306,24 @@ void box_callback(const enif_iuc::AgentBox &new_message)
       agent_box[agent_number_box] = new_message;
       box_checked[agent_number_box] = false;
     }
+
+  if(box_checked[agent_number_box] == false && agent_number_box > 0)
+    {
+      char send_buf[256] = {'\0'};
+      form_start(send_buf);  
+      form_box(send_buf, agent_box[agent_number_box].agent_number, agent_box[agent_number_box].box);
+
+      string send_data(send_buf);
+      USBPORT.write(send_data);
+      cout<<"send box to agent "<<agent_number_box<<endl;
+      cout<<agent_box[agent_number_box].box<<endl;
+    }
+
 }
 
 void get_state(char* buf)
 {  
-  state.data = CharToInt(buf[3]);
+  state.data = CharToInt(buf[0]);
   package_length = 5;
 }
 
@@ -233,29 +352,6 @@ void get_battery(char* buf)
   battery.header.stamp = ros::Time::now();
 }
 
- void form_realTarget(char* buf, int agent_number, enif_iuc::AgentSource sendSource)
-{
-  buf[1] = IntToChar(agent_number);
-  buf[2] = IntToChar(COMMAND_REALTARGET);  
-  DoubleToChar(buf+3, sendSource.source.latitude);
-  DoubleToChar(buf+11, sendSource.source.longitude);
-  DoubleToChar(buf+19, sendSource.source.altitude);
-  FloatToChar(buf+27, sendSource.angle);
-  FloatToChar(buf+31, sendSource.wind_speed);
-  FloatToChar(buf+35, sendSource.diff_y);
-  FloatToChar(buf+39,sendSource.diff_z);
-  FloatToChar(buf+43,sendSource.release_rate);
-  buf[47] = 0x0A;
-}
-
-void form_takeoff(char* buf, int agent_number, std_msgs::Bool takeoff)
-{
-  buf[1] = IntToChar(agent_number);
-  buf[2] = IntToChar(COMMAND_TAKEOFF);
-  buf[3] = IntToChar(takeoff.data*100 + alg.data);
-  buf[4] = 0x0A;
-}
-
 void form_home(char* buf, int agent_number, geographic_msgs::GeoPoint aveHome)
 {
   // different than enif_iuc_quad
@@ -265,51 +361,6 @@ void form_home(char* buf, int agent_number, geographic_msgs::GeoPoint aveHome)
   DoubleToChar(buf+11, aveHome.longitude);
   DoubleToChar(buf+19, aveHome.altitude);  
   buf[19+8] = 0x0A;  
-}
-
-
-void form_waypoint_info(char* buf, int agent_number, int waypoint_number, enif_iuc::WaypointTask &waypoint_list)
-{
-  buf[1] = IntToChar(agent_number);
-  buf[2] = IntToChar(COMMAND_WAYPOINT);
-  buf[3] = IntToChar(waypoint_number);
-  DoubleToChar(buf+4, waypoint_list.velocity);
-  DoubleToChar(buf+12, waypoint_list.damping_distance);
-}
-
-void form_waypoints(char* buf, int waypoint_number, enif_iuc::WaypointTask &waypoint_list)
-{
-  int byte_number = 0;
-  for(int i=0; i<waypoint_number; i++)
-    {
-      DoubleToChar(buf+20+byte_number, waypoint_list.mission_waypoint[i].latitude);
-      byte_number += sizeof(double);
-      DoubleToChar(buf+20+byte_number, waypoint_list.mission_waypoint[i].longitude);
-      byte_number += sizeof(double);
-      DoubleToChar(buf+20+byte_number, waypoint_list.mission_waypoint[i].target_height);
-      byte_number += sizeof(double);
-      buf[20+byte_number] = IntToChar(waypoint_list.mission_waypoint[i].staytime);
-      byte_number++;
-    }
-  buf[20+byte_number] = 0x0A;
-}
-
-void form_box(char* buf, int agent_number, std_msgs::Float64MultiArray &box)
-{
-  buf[1] = IntToChar(agent_number);
-  buf[2] = IntToChar(COMMAND_BOX);
-  DoubleToChar(buf+3,  box.data[0]);
-  DoubleToChar(buf+11, box.data[1]);
-  DoubleToChar(buf+19, box.data[2]);
-  DoubleToChar(buf+27, box.data[3]);
-  DoubleToChar(buf+35, box.data[4]);
-  buf[43] = IntToChar((int)box.data[5]);
-  buf[44] = IntToChar((int)(box.data[6]*20.0));
-  buf[45] = IntToChar((int)box.data[7]);
-  buf[46] = IntToChar((int)box.data[8]);
-  buf[47] = IntToChar((int)box.data[9]);
-  buf[48] = IntToChar((int)box.data[10]);
-  buf[49] = 0x0A;
 }
 
 int main(int argc, char **argv)
@@ -333,8 +384,7 @@ int main(int argc, char **argv)
   ros::Subscriber sub_box        = n.subscribe("rotated_box",5,box_callback);
   ros::Subscriber sub_realTarget = n.subscribe("source",5,realTarget_callback);
   ros::Subscriber sub_planningalgorithm = n.subscribe("planning_algorithm",5, alg_callback);
-   
-  
+
   ros::Rate loop_rate(100);
 
   struct timeval tvstart, tvend, timeout;
@@ -343,8 +393,8 @@ int main(int argc, char **argv)
   timeout.tv_usec = 0;
 
   // Start the USB serial port
-  n.getParam("/enif_iuc_ground/USB", USB);
-  serial::Serial USBPORT(USB, 9600, serial::Timeout::simpleTimeout(100));
+  //  n.getParam("/enif_iuc_ground/USB", USB);
+
   
   // Start the USB serial port
   if(USBPORT.isOpen())
@@ -357,195 +407,203 @@ int main(int argc, char **argv)
 
   while (ros::ok())
   {
-    char charbuf[256] = {'\0'};
-    string data = USBPORT.read(256+1);
-    strcpy(charbuf, data.c_str());
-    char* buf = charbuf;
-    // Get command type
-    int command_type = get_command_type(buf);
-    int c=0;
-    while(buf[0]!='\0' && (command_type == COMMAND_TAKEOFF || command_type==COMMAND_MPS || command_type==COMMAND_HOME || command_type==COMMAND_LOCAL || command_type==COMMAND_STATE || command_type==COMMAND_WAYPOINT || command_type==COMMAND_BOX || command_type==COMMAND_TARGETE || command_type==COMMAND_REALTARGET)){
-      //cout<<strlen(buf)<<endl;
-    // Get the target number first
-    int target_number = get_target_number(buf);
-    command_type = get_command_type(buf);
-    //cout<<"Target number: "<<target_number<<endl;
-    if(target_number < 0){
-      //Do nothing because GS need to subs to all other topics
-      //cout<<"Error receiving data. Target number is negative: "<<target_number<<endl;
-    }else{
-      enif_iuc::AgentGlobalPosition agent_gps;
-      enif_iuc::AgentHeight agent_height;
-      enif_iuc::AgentMPS agent_mps;
-      enif_iuc::AgentState agent_state;
-      enif_iuc::AgentBatteryState agent_battery;
-      std_msgs::Int8 response_alg;
+
+    // check for start
+    data = USBPORT.read(1);
+    if(!data.compare("<")){
+      data = USBPORT.read(1);
+      if(!data.compare("<")){
+	// process data
+	data = USBPORT.read(2);
+	
+	// process data	  
+	data = USBPORT.read(2);	  
+	char Tcharbuf[4] = {'\0'};
+	char *Tbuf = Tcharbuf;
+	strcpy(Tcharbuf, data.c_str());
+
+	int command_type = get_command_type(Tbuf);
+	int target_number = get_target_number(Tbuf);
+
+	enif_iuc::AgentHeight agent_height;
+	enif_iuc::AgentBatteryState agent_battery;
+	std_msgs::Int8 response_alg;
       
-      bool checksum_result = false;
-      switch(command_type){
-      case COMMAND_MPS:
-	//form mps and publish
-	checksum_result = checksum(buf);
-	get_mps(buf);
-	ROS_INFO_THROTTLE(0.1, "Quad No.%d MPS", target_number);
-	agent_mps.agent_number = target_number;
-	agent_mps.mps = mps;
-	if(mps.percentLEL != 0){
-	  if(agent_mps.mps.percentLEL > 0 && agent_mps.mps.percentLEL < 100)
-	    mps_pub.publish(agent_mps);
-	  agent_gps.agent_number = target_number;
-	  if(extract_GPS_from_MPS(mps) == true){
-	    agent_gps.gps = gps;
-	    agent_height.agent_number = target_number;
-	    agent_height.height = height;
-	    height_pub.publish(agent_height);
-	    GPS_pub.publish(agent_gps);
+	bool checksum_result = false;
+	switch(command_type){
+	case COMMAND_MPS:
+	  {
+	    USBPORT.setTimeout(serial::Timeout::max(),100,0,100,0);// adjust timeout
+
+	    char charbuf[256] = {'\0'};
+	    string command_data = USBPORT.read(MPS_LENGTH);
+	    strcpy(charbuf, command_data.c_str());
+	    char *buf = charbuf;
+
+	    if (checkEnd(buf, MPS_LENGTH-1)){
+	      get_mps(buf);
+	      if(mps.percentLEL!=0 && mps.percentLEL>0 && mps.percentLEL<100){
+		enif_iuc::AgentMPS agent_mps;
+		agent_mps.agent_number = target_number;
+		agent_mps.mps = mps;
+		mps_pub.publish(agent_mps);
+	      }
+	      if(extract_GPS_from_MPS(mps) == true){
+		enif_iuc::AgentGlobalPosition agent_gps;
+		agent_gps.agent_number = target_number;
+		agent_gps.gps = gps;
+		agent_height.agent_number = target_number;
+		agent_height.height = height;
+		height_pub.publish(agent_height);
+		GPS_pub.publish(agent_gps);
+	      }
+	    }
+	    else{
+	      ROS_INFO_THROTTLE(1,"no end data");
+	    }
 	  }
-	}else{
-	  agent_gps.agent_number = target_number;
-	  if(extract_GPS_from_MPS(mps) == true){
-	    agent_gps.gps = gps;
-	    agent_height.agent_number = target_number;
-	    agent_height.height = height;
-	    height_pub.publish(agent_height);
-	    GPS_pub.publish(agent_gps);
-	    mps_pub.publish(agent_mps);
+	  break;
+	case COMMAND_STATE:
+	  {
+	    //form state and publish
+	  
+	    USBPORT.setTimeout(serial::Timeout::max(),100,0,100,0);// adjust timeout
+	    char charbuf[256] = {'\0'};
+	    string command_data = USBPORT.read(STATE_LENGTH);
+	    strcpy(charbuf, command_data.c_str());
+	    char *buf = charbuf;
+
+	    ROS_INFO_THROTTLE(1,"Receiving state info from Agent %d", target_number);
+	    if (checkEnd(buf, STATE_LENGTH-1)){
+	      enif_iuc::AgentState agent_state;
+	      get_state(buf);
+	      agent_state.agent_number = target_number;
+	      agent_state.state = state;
+	      state_pub.publish(agent_state);
+	    }
 	  }
-	}
-	break;
-      case COMMAND_STATE:
-	//form state and publish
-	checksum_result = checksum(buf);
-	get_state(buf);
-	agent_state.agent_number = target_number;
-	agent_state.state = state;
-	ROS_INFO_THROTTLE(0.1, "Quad No.%d state", target_number);
-	state_pub.publish(agent_state);
-	break;
-      case COMMAND_WAYPOINT:
-	//response from the agent
-	waypoint_list.mission_waypoint.clear();
-	response_number = get_target_number(buf);
-	waypoint_number = get_waypoint_number(buf);
-	get_waypoint_info(buf, waypoint_list);
-	get_waypoints(waypoint_number, buf, waypoint_list);
-	waypoint_checked[response_number] = check_return_waypoints(agent_wp[response_number].waypoint_list, waypoint_list);
-	cout<<"Waypoint check: "<<waypoint_checked[response_number]<<endl;
-	wpcheck_msg.agent_number = response_number;
-	wpcheck_msg.check.data = waypoint_checked[response_number];
-	wpcheck_pub.publish(wpcheck_msg);
-	cout<<waypoint_list<<endl;
-	break;
-      case COMMAND_BOX:
-	//only verifies response from the agent
-	response_number = get_target_number(buf);
-	box.data.clear();
-	get_box(buf, box);
-	box_checked[response_number] = check_return_box(agent_box[response_number].box, box);
-	cout<<"Box check: "<<box_checked[response_number]<<endl;
-	boxcheck_msg.agent_number = response_number;
-	boxcheck_msg.check.data = box_checked[response_number];
-	boxcheck_pub.publish(boxcheck_msg);
-	cout<<box<<endl;
-	break;
-      case COMMAND_TAKEOFF:
-	//only verifies response from the agent
-	response_number = get_target_number(buf);
-	takeoff_command = get_takeoff_command(buf, response_alg);
-	takeoff_checked[response_number] = check_takeoff(agent_takeoff[response_number].takeoff_command, takeoff_command) && check_alg(alg, response_alg);
-	cout<<"Takeoff check: "<<takeoff_checked[response_number]<<endl;
-	cout<<takeoff_command<<endl;
-	break;
-      case COMMAND_TARGETE:
-	{
-	  get_targetE(buf);
-	  targetE.agent_number = get_target_number(buf);	
-	  agent_targetE_pub.publish(targetE);
-	break;
-	}
-      case COMMAND_REALTARGET:
-	{
-	  //only verifies response from the agent
-	  response_number = get_target_number(buf);
-	  get_realTarget(buf);
-	  source_checked[response_number]= check_return_source(agent_source[response_number], realTarget);
-	  cout<<"What we think it should be"<<agent_source[response_number].source<<endl;
-	  cout<<"source check: "<<source_checked[response_number]<<endl;
-	  cout<<realTarget<<endl;
-	  sourcecheck_msg.agent_number = response_number;
-	  sourcecheck_msg.check.data = source_checked[response_number];
-	  sourcecheck_pub.publish(sourcecheck_msg);
 	  break;
-	}
-      default:
-	break;
-      }
-      buf=buf+package_length;
-    }
-    if(c++>50)
-      break;
-    }
-    
-    if(count%3 == 0)
-      {
-	char send_buf[256] = {'\0'};
-	switch(send_count){
-	case 0:
-	  if(takeoff_checked[agent_number_takeoff] == false && agent_number_takeoff > 0)
-	    {
-	      form_takeoff(send_buf, agent_number_takeoff, agent_takeoff[agent_number_takeoff].takeoff_command);
-	      form_checksum(send_buf);
-	      string send_data(send_buf);
-	      USBPORT.write(send_data);
-	      cout<<"Send takoff command to agent "<<agent_number_takeoff<<endl;
+	case COMMAND_WAYPOINT:
+	  {
+	    //response from the agent
+	    USBPORT.setTimeout(serial::Timeout::max(),1000,0,1000,0);// adjust timeout
+	    char Wcharbuf[256] = {'\0'};
+	    string Wcommand_data = USBPORT.read(1); // get number of waypoints
+	    strcpy(Wcharbuf, Wcommand_data.c_str());
+	    char *Wbuf = Wcharbuf;
+	    waypoint_number = get_waypoint_number(Wbuf);
+	    int numBytes = get_waypointlist_buf_size(waypoint_number);
+
+	    char charbuf[256] = {'\0'};
+	    string command_data = USBPORT.read(numBytes); 
+	    strcpy(charbuf, command_data.c_str());
+	    char *buf = charbuf;
+
+	    if (checkEnd(buf,numBytes-1)){
+	      waypoint_list.mission_waypoint.clear();
+	      get_waypoint_info(buf, waypoint_list);
+	      get_waypoints(waypoint_number, buf, waypoint_list);
+	      cout<<waypoint_list<<endl;
+
+	      response_number = target_number;	    
+	      waypoint_checked[response_number] = check_return_waypoints(agent_wp[response_number].waypoint_list, waypoint_list);
+	      cout<<"Waypoint check: "<<waypoint_checked[response_number]<<endl;
+	      wpcheck_msg.agent_number = response_number;
+	      wpcheck_msg.check.data = waypoint_checked[response_number];
+	      wpcheck_pub.publish(wpcheck_msg);
+	      cout<<waypoint_list<<endl;
 	    }
+	  }
 	  break;
-	case 1:
-	  // Box has higher priority
-	  if(box_checked[agent_number_box] == false && agent_number_box > 0)
-	    {
-	      form_box(send_buf, agent_box[agent_number_box].agent_number, agent_box[agent_number_box].box);
-	      form_checksum(send_buf);
-	      string send_data(send_buf);
-	      USBPORT.write(send_data);
-	      cout<<"send box to agent "<<agent_number_box<<endl;
-	      cout<<agent_box[agent_number_box].box<<endl;
+	case COMMAND_BOX:
+	  {
+	    //only verifies response from the agent
+
+	    USBPORT.setTimeout(serial::Timeout::max(),150,0,150,0);// adjust timeout
+	    char charbuf[256] = {'\0'};
+	    string command_data = USBPORT.read(BOX_LENGTH);
+	    strcpy(charbuf, command_data.c_str());
+	    char *buf = charbuf;
+
+	    if (checkEnd(buf,BOX_LENGTH-1)){
+	      response_number = target_number;
+	      box.data.clear();
+	      get_box(buf, box);
+	      box_checked[response_number] = check_return_box(agent_box[response_number].box, box);
+	      cout<<"Box check: "<<box_checked[response_number]<<endl;
+	      boxcheck_msg.agent_number = response_number;
+	      boxcheck_msg.check.data = box_checked[response_number];
+	      boxcheck_pub.publish(boxcheck_msg);
+	      cout<<box<<endl;
 	    }
-	  else if(waypoint_checked[agent_number_wp] == false && agent_number_wp > 0)
-	    {
-	      form_waypoint_info(send_buf, agent_wp[agent_number_wp].agent_number, agent_wp[agent_number_wp].waypoint_list.mission_waypoint.size(), agent_wp[agent_number_wp].waypoint_list);
-	      form_waypoints(send_buf, agent_wp[agent_number_wp].waypoint_list.mission_waypoint.size(), agent_wp[agent_number_wp].waypoint_list);
-	      form_checksum(send_buf);
-	      string send_data(send_buf);
-	      USBPORT.write(send_data);
-	      cout<<"send waypoint to agent "<<agent_number_wp<<endl;
-	    }
-	  if(agent_number_box >= 3)//Loop through the agent to check send box
-	    agent_number_box = 1;
-	  else
-	    agent_number_box++;	  
+	  }
 	  break;
-	case 2:
-	  if(source_checked[agent_number_source] == false && agent_number_source > 0)
-	    {
-	      form_realTarget(send_buf, 100, agent_source[agent_number_source]); // broadcast
-	      form_checksum(send_buf);
-	      string send_data(send_buf);
-	      USBPORT.write(send_data);
-	      cout<<"Send source command to agent "<<agent_number_source<<endl;
+	case COMMAND_TAKEOFF:
+	  {
+	    USBPORT.setTimeout(serial::Timeout::max(),150,0,150,0);// adjust timeout
+	    char charbuf[256] = {'\0'};
+	    string command_data = USBPORT.read(TAKEOFF_LENGTH);
+	    strcpy(charbuf, command_data.c_str());
+	    char *buf = charbuf;
+
+	    if (checkEnd(buf,TAKEOFF_LENGTH-1)){
+	      //only verifies response from the agent
+	      response_number = target_number;
+	      takeoff_command = get_takeoff_command(buf, response_alg);
+	      takeoff_checked[response_number] = check_takeoff(agent_takeoff[response_number].takeoff_command, takeoff_command) && check_alg(alg, response_alg);
+	      cout<<"Takeoff check: "<<takeoff_checked[response_number]<<endl;
+	      cout<<takeoff_command<<endl;
 	    }
+	  }
+	  break;
+	case COMMAND_TARGETE:
+	  {
+	    ROS_INFO_THROTTLE(1,"Receiving target estimate");
+	    USBPORT.setTimeout(serial::Timeout::max(),150,0,150,0);// adjust timeout
+	    char charbuf[256] = {'\0'};
+	    string command_data = USBPORT.read(TARGETE_LENGTH);
+	    strcpy(charbuf, command_data.c_str());
+	    char *buf = charbuf;
+
+	    if (checkEnd(buf,TARGETE_LENGTH-1)){
+	      get_targetE(buf);
+	      if(checkValue(targetE.source.latitude,-180,180) && checkValue(targetE.source.longitude,-180,180) && checkValue(targetE.source.altitude,0,2000)){
+		targetE.agent_number = target_number;	
+		agent_targetE_pub.publish(targetE);
+	      }
+	    }
+	    break;
+	  }
+	case COMMAND_REALTARGET:
+	  {
+	    USBPORT.setTimeout(serial::Timeout::max(),100,0,100,0);// adjust timeout
+	    char charbuf[256] = {'\0'};
+	    string command_data = USBPORT.read(REALTARGET_LENGTH);
+	    strcpy(charbuf, command_data.c_str());
+	    char *buf = charbuf;
+
+	    if (checkEnd(buf,REALTARGET_LENGTH-1)){
+	      //only verifies response from the agent
+	      response_number = target_number;
+	      get_realTarget(buf);
+	      source_checked[response_number]= check_return_source(agent_source[response_number], realTarget);
+	      cout<<"What we think it should be"<<agent_source[response_number].source<<endl;
+	      cout<<"source check: "<<source_checked[response_number]<<endl;
+	      cout<<realTarget<<endl;
+	      sourcecheck_msg.agent_number = response_number;
+	      sourcecheck_msg.check.data = source_checked[response_number];
+	      sourcecheck_pub.publish(sourcecheck_msg);
+	    }
+	  }
 	  break;
 	default:
 	  break;
 	}
-	if(send_count < 2) send_count++;
-	else send_count = 0;
       }
+    }
     ros::spinOnce();
-
-    loop_rate.sleep();
+    //loop_rate.sleep();
     ++count;
   }
-
   return 0;
 }

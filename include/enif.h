@@ -62,6 +62,7 @@ using namespace std;
 #define TARGETE_LENGTH    45
 #define BOX_LENGTH        46
 #define TAKEOFF_LENGTH    1
+#define STATE_LENGTH      1
 
 #define GAS_NONE    0
 #define GAS_PROPANE 1
@@ -514,14 +515,14 @@ void get_targetE(char* buf)
 {
   double latitude, longitude, altitude;
   float angle, diff_y, diff_z, release_rate, wind_speed;
-  CharToDouble(buf+3, latitude);
-  CharToDouble(buf+11, longitude);
-  CharToDouble(buf+19, altitude);
-  CharToFloat(buf+27, angle);
-  CharToFloat(buf+31, wind_speed);    
-  CharToFloat(buf+35, diff_y);
-  CharToFloat(buf+39, diff_z);
-  CharToFloat(buf+43, release_rate);
+  CharToDouble(buf, latitude);
+  CharToDouble(buf+8, longitude);
+  CharToDouble(buf+16, altitude);
+  CharToFloat(buf+24, angle);
+  CharToFloat(buf+28, wind_speed);    
+  CharToFloat(buf+32, diff_y);
+  CharToFloat(buf+36, diff_z);
+  CharToFloat(buf+40, release_rate);
   
   targetE.source.latitude = latitude;
   targetE.source.longitude = longitude;  
