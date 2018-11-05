@@ -317,7 +317,7 @@ int main(int argc, char **argv)
 	      char *buf = charbuf;
 
 	      //form mps and publish
-	      //ROS_INFO_THROTTLE(1,"Receiving mps quad info from Agent %d", target_number);
+	      ROS_INFO_THROTTLE(1,"Receiving mps quad info from Agent %d", target_number);
 	    
 	      if (checkEnd(buf, MPS_LENGTH-1)){
 		get_other_mps(buf);
@@ -355,9 +355,10 @@ int main(int argc, char **argv)
 		      char send_buf[256] = {'\0'};
 		      char start_buf[100] = {'\0'};
 		      form_start(start_buf);
-		  
+		      start_buf[2] = IntToChar(AGENT_NUMBER);
+		      start_buf[3] = IntToChar(COMMAND_REALTARGET);
+	
 		      strcpy(send_buf, buf);
-		      send_buf[REALTARGET_LENGTH] = 0x0A;
 		  
 		      string start_data(start_buf);
 		      string send_data(send_buf);
@@ -391,126 +392,149 @@ int main(int argc, char **argv)
 	    
 	  case COMMAND_WAYPOINT:
 	    {
-	      // Publish waypoint
-	      cout<< " Waypoint"<<endl;
-	      USBPORT.setTimeout(serial::Timeout::max(),1000,0,1000,0);// adjust timeout
+	      if (target_number==AGENT_NUMBER)
+		{
 
-	      char Wcharbuf[256] = {'\0'};
-	      string Wcommand_data = USBPORT.read(1); // get number of waypoints
-	      strcpy(Wcharbuf, Wcommand_data.c_str());
-	      char *Wbuf = Wcharbuf;
-	      waypoint_number = get_waypoint_number(Wbuf);
-	      int numBytes = get_waypointlist_buf_size(waypoint_number);
+		  // Publish waypoint
+		  cout<< " Waypoint"<<endl;
+		  USBPORT.setTimeout(serial::Timeout::max(),1000,0,1000,0);// adjust timeout
 
-	      char charbuf[256] = {'\0'};
-	      string command_data = USBPORT.read(numBytes); 
-	      strcpy(charbuf, command_data.c_str());
-	      char *buf = charbuf;
+		  char Wcharbuf[256] = {'\0'};
+		  string Wcommand_data = USBPORT.read(1); // get number of waypoints
+		  strcpy(Wcharbuf, Wcommand_data.c_str());
+		  char *Wbuf = Wcharbuf;
+		  waypoint_number = get_waypoint_number(Wbuf);
 
-	      if (checkEnd(buf,numBytes-1)){
-		waypoint_list.mission_waypoint.clear();
-		get_waypoint_info(buf, waypoint_list);
-		get_waypoints(waypoint_number, buf, waypoint_list);
-		cout<<waypoint_list<<endl;
-		wp_pub.publish(waypoint_list);
-	      }	      
+		  int numBytes = get_waypointlist_buf_size(waypoint_number)+1;
+
+		  cout<<"waypoint_number: "<<waypoint_number<<endl;
+		  cout<<"numBytes: "<<numBytes<<endl;
+		  
+		  char charbuf[256] = {'\0'};
+		  string command_data = USBPORT.read(numBytes); 
+		  strcpy(charbuf, command_data.c_str());
+		  char *buf = charbuf;
+
+		  if (checkEnd(buf,numBytes-1)){
+		    waypoint_list.mission_waypoint.clear();
+		    get_waypoint_info(buf, waypoint_list);
+		    get_waypoints(waypoint_number, buf, waypoint_list);
+		    cout<<waypoint_list<<endl;
+		    wp_pub.publish(waypoint_list);
 	      
-	      char send_buf[256] = {'\0'};
-	      char start_buf[100] = {'\0'};
-	      form_start(start_buf);
-	      start_buf[2] = IntToChar(waypoint_number);
+		    char send_buf[256] = {'\0'};
+		    char start_buf[100] = {'\0'};
+		    form_start(start_buf);
+		    start_buf[2] = IntToChar(target_number);
+		    start_buf[3] = IntToChar(COMMAND_WAYPOINT);
+		    start_buf[4] = IntToChar(waypoint_number);
 		  
-	      strcpy(send_buf, buf);
-	      send_buf[numBytes] = 0x0A;
+		    strcpy(send_buf, buf);
 		  
-	      string start_data(start_buf);
-	      string send_data(send_buf);
+		    string start_data(start_buf);
+		    string send_data(send_buf);
 
-	      send_data.insert(0,start_data); // insert start << at beginning
-	      USBPORT.write(send_data);
-	     
+		    send_data.insert(0,start_data); // insert start << at beginning
+		    USBPORT.write(send_data);
+		  }
+		}
 	    }
 	  break;
 
 	  case COMMAND_BOX:{
-	    cout<< " Box"<<endl;
-	    USBPORT.setTimeout(serial::Timeout::max(),150,0,150,0);// adjust timeout
-	    char charbuf[256] = {'\0'};
-	    string command_data = USBPORT.read(BOX_LENGTH);
-	    strcpy(charbuf, command_data.c_str());
-	    char *buf = charbuf;
+	    if (target_number==AGENT_NUMBER)
+	      {
+		cout<< " Box"<<endl;
+		USBPORT.setTimeout(serial::Timeout::max(),150,0,150,0);// adjust timeout
+		char charbuf[256] = {'\0'};
+		string command_data = USBPORT.read(BOX_LENGTH);
+		strcpy(charbuf, command_data.c_str());
+		char *buf = charbuf;
 
-	    if (checkEnd(buf,BOX_LENGTH-1)){
-	      box.data.clear();
-	      NEW_BOX = get_box(buf, box);
-	      box_pub.publish(box);
+		if (checkEnd(buf,BOX_LENGTH-1)){
+		  box.data.clear();
+		  NEW_BOX = get_box(buf, box);
+		  box_pub.publish(box);
 	      
-	      char send_buf[256] = {'\0'};
-	      char start_buf[100] = {'\0'};
-	      form_start(start_buf);
+		  char send_buf[256] = {'\0'};
+		  char start_buf[100] = {'\0'};
+		  form_start(start_buf);
+		  start_buf[2] = IntToChar(target_number);
+		  start_buf[3] = IntToChar(COMMAND_BOX);
 		  
-	      strcpy(send_buf, buf);
-	      send_buf[BOX_LENGTH] = 0x0A;
+		  strcpy(send_buf, buf);
+		  //send_buf[BOX_LENGTH] = 0x0A;
 		  
-	      string start_data(start_buf);
-	      string send_data(send_buf);
+		  string start_data(start_buf);
+		  string send_data(send_buf);
 
-	      send_data.insert(0,start_data); // insert start << at beginning
-	      USBPORT.write(send_data);
-	    }
-	  } 
+		  send_data.insert(0,start_data); // insert start << at beginning
+		  USBPORT.write(send_data);
+		}
+		else{
+		  ROS_INFO_THROTTLE(1,"no end data");
+		}
+	    
+	      }
+	  }
 	    break;
 	    
 	  case COMMAND_TAKEOFF:{
-	    USBPORT.setTimeout(serial::Timeout::max(),150,0,150,0);// adjust timeout
-	    char charbuf[256] = {'\0'};
-	    string command_data = USBPORT.read(TAKEOFF_LENGTH);
-	    strcpy(charbuf, command_data.c_str());
-	    char *buf = charbuf;
+	    if (target_number==AGENT_NUMBER)
+	      {
 
-	    if (checkEnd(buf,TAKEOFF_LENGTH-1)){
-	      std_msgs::Bool cmd = get_takeoff_command(buf, alg);
+		USBPORT.setTimeout(serial::Timeout::max(),150,0,150,0);// adjust timeout
+		char charbuf[256] = {'\0'};
+		string command_data = USBPORT.read(TAKEOFF_LENGTH);
+		strcpy(charbuf, command_data.c_str());
+		char *buf = charbuf;
 
-	      switch (alg.data) {
-	      case 0 :
-		n.setParam("/runAlg", "Waypoint");
-		break;
-	      case 1 :	  
-		n.setParam("/runAlg", "lawnMower");
-		break;
-	      case 2 :
-		n.setParam("/runAlg", "PSO");
-		break;
-	      case 3 :
-		n.setParam("/runAlg", "PF");
-		break;
-	      default :
-		n.setParam("/runAlg", "lawnMower");
+		if (checkEnd(buf,TAKEOFF_LENGTH-1)){
+		  std_msgs::Bool cmd = get_takeoff_command(buf, alg);
+
+		  switch (alg.data) {
+		  case 0 :
+		    n.setParam("/runAlg", "Waypoint");
+		    break;
+		  case 1 :	  
+		    n.setParam("/runAlg", "lawnMower");
+		    break;
+		  case 2 :
+		    n.setParam("/runAlg", "PSO");
+		    break;
+		  case 3 :
+		    n.setParam("/runAlg", "PF");
+		    break;
+		  default :
+		    n.setParam("/runAlg", "lawnMower");
+		  }
+
+		  takeoff_command.data = cmd.data;
+		  if(takeoff_command.data == true)
+		    cout<< " Takeoff"<<endl;
+		  else
+		    cout<< " Land"<<endl;	    
+		  takeoff_pub.publish(takeoff_command);
+
+		  char send_buf[256] = {'\0'};
+		  char start_buf[100] = {'\0'};
+		  form_start(start_buf);
+		  start_buf[2] = IntToChar(target_number);
+		  start_buf[3] = IntToChar(COMMAND_TAKEOFF);
+
+		  
+		  strcpy(send_buf, buf);
+		  
+		  string start_data(start_buf);
+		  string send_data(send_buf);
+
+		  send_data.insert(0,start_data); // insert start << at beginning
+		  USBPORT.write(send_data);	      
+		}
 	      }
-
-	      takeoff_command.data = cmd.data;
-	      if(takeoff_command.data == true)
-		cout<< " Takeoff"<<endl;
-	      else
-		cout<< " Land"<<endl;	    
-	      takeoff_pub.publish(takeoff_command);
-
-	      char send_buf[256] = {'\0'};
-	      char start_buf[100] = {'\0'};
-	      form_start(start_buf);
-		  
-	      strcpy(send_buf, buf);
-	      send_buf[TAKEOFF_LENGTH] = 0x0A;
-		  
-	      string start_data(start_buf);
-	      string send_data(send_buf);
-
-	      send_data.insert(0,start_data); // insert start << at beginning
-	      USBPORT.write(send_data);	      
-	    }	    	    
 	    break;
 	  }
-	  
+
 	  default:
 	    break;
 	  }
