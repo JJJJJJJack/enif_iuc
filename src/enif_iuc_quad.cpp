@@ -194,12 +194,16 @@ void transmitData_MPS(const ros::TimerEvent& event)
   char send_buf[256] = {'\0'};
   form_start(send_buf);
   if(NEW_GPS){
+    if(!NEW_MPS){
+      mps.percentLEL = -1;
+    }
     form_mps(send_buf);
     //form_checksum(send_buf);
     string send_data(send_buf);	    
-    USBPORT.write(send_data);	    
-    NEW_GPS = false;
-  }	
+    USBPORT.write(send_data);
+    NEW_MPS=false;
+    NEW_GPS=false;
+  }
 }
 
 void transmitData_targetE(const ros::TimerEvent& event)
@@ -257,9 +261,9 @@ int main(int argc, char **argv)
   ros::Subscriber sub_lidar   = n.subscribe("/scan",1,lidar_callback);
   ros::Subscriber sub_CA      = n.subscribe("/cmd_vel",1,CA_callback);
 
-  ros::Timer transmit_timer_MPS     = n.createTimer(ros::Duration(.2), transmitData_MPS);  
-  ros::Timer transmit_timer_targetE = n.createTimer(ros::Duration(.5), transmitData_targetE);
-  ros::Timer transmit_timer_state   = n.createTimer(ros::Duration(1), transmitData_state);
+  ros::Timer transmit_timer_MPS     = n.createTimer(ros::Duration(.25), transmitData_MPS);  
+  ros::Timer transmit_timer_targetE = n.createTimer(ros::Duration(2), transmitData_targetE);
+  ros::Timer transmit_timer_state   = n.createTimer(ros::Duration(10), transmitData_state);
    
   n.getParam("/enif_iuc_quad/AGENT_NUMBER", AGENT_NUMBER);
   cout<<"This is Agent No."<<AGENT_NUMBER<<endl;
