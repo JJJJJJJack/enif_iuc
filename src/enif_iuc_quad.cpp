@@ -246,7 +246,7 @@ int main(int argc, char **argv)
   ros::Subscriber sub_CA      = n.subscribe("/cmd_vel",1,CA_callback);
 
   ros::Timer transmit_timer   = n.createTimer(ros::Duration(.2), transmitData);
-  
+   
   n.getParam("/enif_iuc_quad/AGENT_NUMBER", AGENT_NUMBER);
   cout<<"This is Agent No."<<AGENT_NUMBER<<endl;
   
@@ -291,12 +291,11 @@ int main(int argc, char **argv)
   while (ros::ok())
     {
       data = USBPORT.read(1);
-
       // check for start
       if (!data.compare("<")){
 	data = USBPORT.read(1);
 	if (!data.compare("<")){
-	  
+
 	  // process data	  
 	  data = USBPORT.read(2);	  
 	  char Tcharbuf[4] = {'\0'};
@@ -373,7 +372,7 @@ int main(int argc, char **argv)
 	  case COMMAND_TARGETE:
 	    {
 	      //get source and publish
-	      ROS_INFO_THROTTLE(1,"Receiving target estimate from Agent %d", target_number);
+	      ROS_INFO_THROTTLE(1,"Receiving target estimate");
 	      USBPORT.setTimeout(serial::Timeout::max(),150,0,150,0);// adjust timeout
 	      char charbuf[256] = {'\0'};
 	      string command_data = USBPORT.read(TARGETE_LENGTH);

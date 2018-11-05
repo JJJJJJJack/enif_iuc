@@ -57,6 +57,7 @@ using namespace std;
 #define COMMAND_TARGETE    11
 #define COMMAND_REALTARGET 12
 
+// length of package without start, agentnumber, and command.
 #define MPS_LENGTH        42
 #define REALTARGET_LENGTH 45
 #define TARGETE_LENGTH    45

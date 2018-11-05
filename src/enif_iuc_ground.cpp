@@ -101,7 +101,7 @@ void form_box(char* buf, int agent_number, std_msgs::Float64MultiArray &box)
   buf[46] = IntToChar((int)box.data[7]);
   buf[47] = IntToChar((int)box.data[8]);
   buf[48] = IntToChar((int)box.data[9]);
-  buf[49] = IntToChar((int)box.data[10]);
+  buf[49] = IntToChar((int)box.data[10]);  
   buf[50] = 0x0A;
 }
 
@@ -413,8 +413,6 @@ int main(int argc, char **argv)
     if(!data.compare("<")){
       data = USBPORT.read(1);
       if(!data.compare("<")){
-	// process data
-	data = USBPORT.read(2);
 	
 	// process data	  
 	data = USBPORT.read(2);	  
@@ -439,6 +437,8 @@ int main(int argc, char **argv)
 	    string command_data = USBPORT.read(MPS_LENGTH);
 	    strcpy(charbuf, command_data.c_str());
 	    char *buf = charbuf;
+	    
+	    ROS_INFO_THROTTLE(1,"Receiving mps quad info from Agent %d", target_number);
 
 	    if (checkEnd(buf, MPS_LENGTH-1)){
 	      get_mps(buf);
@@ -481,6 +481,10 @@ int main(int argc, char **argv)
 	      agent_state.state = state;
 	      state_pub.publish(agent_state);
 	    }
+	    else{
+	      ROS_INFO_THROTTLE(1,"no end data");
+	    }
+
 	  }
 	  break;
 	case COMMAND_WAYPOINT:
@@ -492,12 +496,14 @@ int main(int argc, char **argv)
 	    strcpy(Wcharbuf, Wcommand_data.c_str());
 	    char *Wbuf = Wcharbuf;
 	    waypoint_number = get_waypoint_number(Wbuf);
-	    int numBytes = get_waypointlist_buf_size(waypoint_number);
+	    int numBytes = get_waypointlist_buf_size(waypoint_number)+1;
 
 	    char charbuf[256] = {'\0'};
 	    string command_data = USBPORT.read(numBytes); 
 	    strcpy(charbuf, command_data.c_str());
 	    char *buf = charbuf;
+
+	    cout<<"waypoints from"<<target_number<<endl;
 
 	    if (checkEnd(buf,numBytes-1)){
 	      waypoint_list.mission_waypoint.clear();
@@ -511,7 +517,7 @@ int main(int argc, char **argv)
 	      wpcheck_msg.agent_number = response_number;
 	      wpcheck_msg.check.data = waypoint_checked[response_number];
 	      wpcheck_pub.publish(wpcheck_msg);
-	      cout<<waypoint_list<<endl;
+	      cout<<agent_wp[response_number]<<endl;
 	    }
 	  }
 	  break;
@@ -525,6 +531,8 @@ int main(int argc, char **argv)
 	    strcpy(charbuf, command_data.c_str());
 	    char *buf = charbuf;
 
+	    cout<<"box target number: "<< target_number<<endl;
+
 	    if (checkEnd(buf,BOX_LENGTH-1)){
 	      response_number = target_number;
 	      box.data.clear();
@@ -536,6 +544,10 @@ int main(int argc, char **argv)
 	      boxcheck_pub.publish(boxcheck_msg);
 	      cout<<box<<endl;
 	    }
+	    else{
+	      ROS_INFO_THROTTLE(1,"no end data");
+	    }
+
 	  }
 	  break;
 	case COMMAND_TAKEOFF:
@@ -582,18 +594,25 @@ int main(int argc, char **argv)
 	    strcpy(charbuf, command_data.c_str());
 	    char *buf = charbuf;
 
+
 	    if (checkEnd(buf,REALTARGET_LENGTH-1)){
 	      //only verifies response from the agent
 	      response_number = target_number;
 	      get_realTarget(buf);
 	      source_checked[response_number]= check_return_source(agent_source[response_number], realTarget);
+	      
 	      cout<<"What we think it should be"<<agent_source[response_number].source<<endl;
 	      cout<<"source check: "<<source_checked[response_number]<<endl;
 	      cout<<realTarget<<endl;
 	      sourcecheck_msg.agent_number = response_number;
 	      sourcecheck_msg.check.data = source_checked[response_number];
-	      sourcecheck_pub.publish(sourcecheck_msg);
+	      sourcecheck_pub.publish(sourcecheck_msg);	      
 	    }
+	    else{
+	      ROS_INFO_THROTTLE(1,"no end data realtarget");
+	    }
+
+
 	  }
 	  break;
 	default:
