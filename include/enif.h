@@ -25,6 +25,7 @@
 #include <mavros_msgs/HomePosition.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include "geometry_msgs/Twist.h"
+#include <geometry_msgs/TwistStamped.h>
 #include <nav_msgs/Odometry.h>
 #include "std_msgs/UInt8.h"
 #include "std_msgs/Bool.h"
@@ -58,7 +59,7 @@ using namespace std;
 #define COMMAND_REALTARGET 12
 
 // length of package without start, agentnumber, and command.
-#define MPS_LENGTH        42
+#define MPS_LENGTH        54 //42
 #define REALTARGET_LENGTH 45
 #define TARGETE_LENGTH    45
 #define BOX_LENGTH        47
@@ -91,6 +92,9 @@ int GAS_ID = 0;
 
 std_msgs::UInt8 state;
 sensor_msgs::NavSatFix gps;
+
+geometry_msgs::TwistStamped vel;
+
 mps_driver::MPS mps, mps_other;
 sensor_msgs::Range height,height_other;
 sensor_msgs::BatteryState battery;
@@ -435,7 +439,7 @@ void get_mps(char* buf)
     string str = "None";
     mps.gasID = str;
   }
-  float percentLEL, temperature, local_height, humidity;
+  float percentLEL, temperature, local_height, humidity, vel_x, vel_y, vel_z;
   double GPS_latitude, GPS_longitude, GPS_altitude;
   CharToFloat(buf+1, percentLEL);
   mps.percentLEL = percentLEL;
@@ -451,6 +455,13 @@ void get_mps(char* buf)
   mps.GPS_longitude = GPS_longitude;
   CharToDouble(buf+1+32, GPS_altitude);
   mps.GPS_altitude = GPS_altitude;
+
+  CharToFloat(buf+41, vel_x);
+  mps.vel_x = vel_x;  
+  CharToFloat(buf+45, vel_y);
+  mps.vel_y = vel_y;
+  CharToFloat(buf+49, vel_z);
+  mps.vel_z = vel_z;
 
   package_length = 45;  
 }
@@ -468,7 +479,7 @@ void get_other_mps(char* buf)
     string str = "None";
     mps_other.gasID = str;
   }
-  float percentLEL, temperature, local_height, humidity;
+  float percentLEL, temperature, local_height, humidity, vel_x, vel_y, vel_z;
   double GPS_latitude, GPS_longitude, GPS_altitude;
   CharToFloat(buf+1, percentLEL);
   mps_other.percentLEL = percentLEL;
@@ -484,6 +495,13 @@ void get_other_mps(char* buf)
   mps_other.GPS_longitude = GPS_longitude;
   CharToDouble(buf+1+32, GPS_altitude);
   mps_other.GPS_altitude = GPS_altitude;
+
+  CharToFloat(buf+41, vel_x);
+  mps_other.vel_x = vel_x;  
+  CharToFloat(buf+45, vel_y);
+  mps_other.vel_y = vel_y;
+  CharToFloat(buf+49, vel_z);
+  mps_other.vel_z = vel_z;
 
   package_length = 45;
 }

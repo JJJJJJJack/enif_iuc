@@ -65,6 +65,11 @@ void mps_callback(const mps_driver::MPS &new_message)
   MPS_update_sec = ros::Time::now().toSec();
 }
 
+void vel_callback(const geometry_msgs::TwistStamped& msg)
+{
+  vel = msg;
+}
+ 
 void GPS_callback(const sensor_msgs::NavSatFix &new_message)
 {
   gps = new_message;
@@ -111,6 +116,11 @@ void form_mps(char* buf)
   DoubleToChar(buf+5+16, gps.latitude);
   DoubleToChar(buf+5+24, gps.longitude);
   DoubleToChar(buf+5+32, gps.altitude);
+
+  FloatToChar(buf+45, vel.twist.linear.x);
+  FloatToChar(buf+49, vel.twist.linear.y);
+  FloatToChar(buf+53, vel.twist.linear.z);  
+  
   buf[5+40] = 0x0A;
   // Clear the percentLEL to make sure we don't pub wrong data when we get new GPS
 
@@ -249,7 +259,9 @@ int main(int argc, char **argv)
   // Subscribe topics from onboard ROS and transmit it through Xbee
   ros::Subscriber sub_state   = n.subscribe("agentState",1,state_callback);
   ros::Subscriber sub_mps     = n.subscribe("mps_data",1,mps_callback);
-  ros::Subscriber sub_GPS     = n.subscribe("mavros/global_position/global",1,GPS_callback);
+  ros::Subscriber sub_GPS     = n.subscribe("mavros/global_position/global" ,1, GPS_callback);  
+  ros::Subscriber sub_vel     = n.subscribe("mavros/local_position/velocity",1, vel_callback);
+  
   ros::Subscriber sub_height  = n.subscribe("mavros/distance_sensor/lidarlite_pub",1,height_callback);
   ros::Subscriber sub_battery = n.subscribe("mavros/battery",1,battery_callback);
   
