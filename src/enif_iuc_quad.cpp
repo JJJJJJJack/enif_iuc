@@ -121,7 +121,7 @@ void form_mps(char* buf)
   FloatToChar(buf+49, vel.twist.linear.y);
   FloatToChar(buf+53, vel.twist.linear.z);  
   
-  buf[5+40] = 0x0A;
+  buf[57] = 0x0A;
   // Clear the percentLEL to make sure we don't pub wrong data when we get new GPS
 
   clearmps();
