@@ -73,6 +73,12 @@ using namespace std;
 #define REMAP_A 0.5
 #define REMAP_B -990.0
 
+#define ALG_WAYPOINT  0
+#define ALG_LAWNMOWER 1
+#define ALG_PSO       2
+#define ALG_PF        3
+#define ALG_INFO      4
+
 int package_length = 0;
 
 // transmit local and home info from quad

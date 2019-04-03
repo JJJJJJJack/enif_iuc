@@ -522,17 +522,20 @@ int main(int argc, char **argv)
 		  std_msgs::Bool cmd = get_takeoff_command(buf, alg);
 
 		  switch (alg.data) {
-		  case 0 :
+		  case ALG_WAYPOINT :
 		    n.setParam("/runAlg", "Waypoint");
 		    break;
-		  case 1 :	  
+		  case ALG_LAWNMOWER :	  
 		    n.setParam("/runAlg", "lawnMower");
 		    break;
-		  case 2 :
+		  case ALG_PSO :
 		    n.setParam("/runAlg", "PSO");
 		    break;
-		  case 3 :
+		  case ALG_PF :
 		    n.setParam("/runAlg", "PF");
+		    break;
+		  case ALG_INFO :
+		    n.setParam("/runAlg", "info");
 		    break;
 		  default :
 		    n.setParam("/runAlg", "lawnMower");
