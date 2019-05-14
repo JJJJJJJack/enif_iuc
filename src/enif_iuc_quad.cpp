@@ -112,13 +112,18 @@ void form_mps(char* buf)
   FloatToChar(buf+8, height.range);
   DoubleToChar(buf+12, gps.latitude);
   DoubleToChar(buf+20, gps.longitude);
-  DoubleToChar(buf+28, gps.altitude);
 
-  FloatToChar(buf+36, vel.twist.linear.x);
-  FloatToChar(buf+40, vel.twist.linear.y);
-  FloatToChar(buf+44, vel.twist.linear.z);  
+  FloatToChar(buf+28, vel.twist.linear.x);
+  FloatToChar(buf+32, vel.twist.linear.y);
+  FloatToChar(buf+36, vel.twist.linear.z);  
+
+  //DoubleToChar(buf+28, gps.altitude);
   
-  buf[48] = 0x0A;
+  //FloatToChar(buf+36, vel.twist.linear.x);
+  //FloatToChar(buf+40, vel.twist.linear.y);
+  //FloatToChar(buf+44, vel.twist.linear.z);  
+  
+  buf[40] = 0x0A;
   // Clear the percentLEL to make sure we don't pub wrong data when we get new GPS
 
   clearmps();

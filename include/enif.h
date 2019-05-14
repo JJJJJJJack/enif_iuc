@@ -59,7 +59,7 @@ using namespace std;
 #define COMMAND_REALTARGET 12
 
 // length of package without start, agentnumber, and command.
-#define MPS_LENGTH        45//54 //42
+#define MPS_LENGTH        37//45//54 //42
 #define REALTARGET_LENGTH 45
 #define TARGETE_LENGTH    45
 #define BOX_LENGTH        47
@@ -444,15 +444,23 @@ void get_mps(char* buf)
   mps.GPS_latitude = GPS_latitude;
   CharToDouble(buf+16, GPS_longitude);
   mps.GPS_longitude = GPS_longitude;
-  CharToDouble(buf+24, GPS_altitude);
-  mps.GPS_altitude = GPS_altitude;
 
-  CharToFloat(buf+32, vel_x);
+  CharToFloat(buf+24, vel_x);
   mps.vel_x = vel_x;  
-  CharToFloat(buf+36, vel_y);
+  CharToFloat(buf+28, vel_y);
   mps.vel_y = vel_y;
-  CharToFloat(buf+40, vel_z);
+  CharToFloat(buf+32, vel_z);
   mps.vel_z = vel_z;
+
+  //CharToDouble(buf+24, GPS_altitude);
+  //mps.GPS_altitude = GPS_altitude;
+
+  //CharToFloat(buf+32, vel_x);
+  //mps.vel_x = vel_x;  
+  //CharToFloat(buf+36, vel_y);
+  //mps.vel_y = vel_y;
+  //CharToFloat(buf+40, vel_z);
+  //mps.vel_z = vel_z;
 
 }
 
@@ -468,15 +476,23 @@ void get_other_mps(char* buf)
   mps_other.GPS_latitude = GPS_latitude;
   CharToDouble(buf+16, GPS_longitude);
   mps_other.GPS_longitude = GPS_longitude;
-  CharToDouble(buf+24, GPS_altitude);
-  mps_other.GPS_altitude = GPS_altitude;
 
-  CharToFloat(buf+32, vel_x);
+  CharToFloat(buf+24, vel_x);
   mps_other.vel_x = vel_x;  
-  CharToFloat(buf+36, vel_y);
+  CharToFloat(buf+28, vel_y);
   mps_other.vel_y = vel_y;
-  CharToFloat(buf+40, vel_z);
+  CharToFloat(buf+32, vel_z);
   mps_other.vel_z = vel_z;
+  
+  //CharToDouble(buf+24, GPS_altitude);
+  //mps_other.GPS_altitude = GPS_altitude;
+
+  //CharToFloat(buf+32, vel_x);
+  //mps_other.vel_x = vel_x;  
+  //CharToFloat(buf+36, vel_y);
+  //mps_other.vel_y = vel_y;
+  //CharToFloat(buf+40, vel_z);
+  //mps_other.vel_z = vel_z;
 
 }
 
