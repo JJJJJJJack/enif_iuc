@@ -10,8 +10,13 @@
 #include "enif_iuc/AgentBox.h"
 #include "enif_iuc/AgentHome.h"
 #include "enif_iuc/AgentLocal.h"
+#include <time.h>
+#include <chrono>
 
 bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false, NEW_HOME = false, NEW_LOCAL = false, NEW_TARGETE=false, NEW_REALTARGET=false, NEW_BOX=false;
+
+int transCtr=0;
+auto start=std::chrono::system_clock::now();;
 
 bool ERROR_CA = false, ERROR_LIDAR = false, ERROR_ALTITUDE = false, ERROR_GPS = false, ERROR_MPS = false;
 double CA_update_sec, Lidar_update_sec, GPS_update_sec, MPS_update_sec;
@@ -23,7 +28,7 @@ GPS   Lidar  CA   Alt  MPS  | agentState
 
 ---------------------------------------------*/
 
-serial::Serial USBPORT("/dev/xbee", 57600, serial::Timeout::simpleTimeout(1000));
+serial::Serial USBPORT("/dev/xbee", 19200, serial::Timeout::simpleTimeout(1000));
 
 using namespace std;
 
@@ -202,10 +207,13 @@ void form_battery(char* buf)
 }
 
 void transmitData_MPS(const ros::TimerEvent& event)
-{
-  char send_buf[256] = {'\0'};
-  form_start(send_buf);
+{  
+  
   if(NEW_GPS){
+    auto s1 = std::chrono::system_clock::now();
+    
+    char send_buf[256] = {'\0'};
+    form_start(send_buf);
     if(!NEW_MPS){
       mps.percentLEL = -1;
     }
@@ -213,9 +221,22 @@ void transmitData_MPS(const ros::TimerEvent& event)
     //form_checksum(send_buf);
     string send_data(send_buf);	    
     USBPORT.write(send_data);
+    auto e1 = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapse=e1-s1;
+
     NEW_MPS=false;
-    NEW_GPS=false;
+    NEW_GPS=false;    
+    if (transCtr==0){ // start timer
+      start = std::chrono::system_clock::now();
+    }
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds=end-start;
+    
+    //std::cout<<"transmit time="<<t1<<std::endl;
+    transCtr++;
+    std::cout<<"transmit per sec "<<transCtr<<", "<<elapsed_seconds.count()<<", "<<transCtr/(elapsed_seconds.count())<<", "<<elapse.count()<<std::endl;
   }
+
 }
 
 void transmitData_targetE(const ros::TimerEvent& event)
@@ -322,8 +343,13 @@ int main(int argc, char **argv)
   int count = 0, send_count = 0;
   int waypoint_number = 0;
 
+  ros::AsyncSpinner spinner(2);
+  spinner.start();
+  //ros::waitForShutdown();
+
   while (ros::ok())
     {
+      
       data = USBPORT.read(1);
       // check for start
       if (!data.compare("<")){
@@ -342,6 +368,7 @@ int main(int argc, char **argv)
 	  switch(command_type){
 	  case COMMAND_MPS:
 	    {
+	      
 	      USBPORT.setTimeout(serial::Timeout::max(),100,0,100,0);// adjust timeout
 	      enif_iuc::AgentMPS agent_mps;
 	      char charbuf[256] = {'\0'};
@@ -363,6 +390,7 @@ int main(int argc, char **argv)
 	      else{
 		ROS_INFO_THROTTLE(1,"no end data");
 	      }
+	      
 	    }
 	    break;
 	  case COMMAND_REALTARGET:
@@ -593,12 +621,13 @@ int main(int argc, char **argv)
       ERROR_ALTITUDE = true;
     if(MPS_interval > 0.5)
       ERROR_MPS = true;
-    
-    ros::spinOnce();
-    //loop_rate.sleep();
-    ++count;
 
-  }
+    //ros::spinOnce();
+    
+    //loop_rate.sleep();
+    ++count;    
+
+    }
   return 0;
 }
   
