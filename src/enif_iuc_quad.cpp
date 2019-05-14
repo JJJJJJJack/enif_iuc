@@ -273,7 +273,9 @@ int main(int argc, char **argv)
   ros::Subscriber sub_lidar   = n.subscribe("/scan",1,lidar_callback);
   ros::Subscriber sub_CA      = n.subscribe("/cmd_vel",1,CA_callback);
 
-  ros::Timer transmit_timer_MPS     = n.createTimer(ros::Duration(.35), transmitData_MPS);  
+  n.param<double>("/enif_iuc_quad/transmitRate", transmitRate, .35);
+  
+  ros::Timer transmit_timer_MPS     = n.createTimer(ros::Duration(transmitRate), transmitData_MPS);  
   ros::Timer transmit_timer_targetE = n.createTimer(ros::Duration(2), transmitData_targetE);
   ros::Timer transmit_timer_state   = n.createTimer(ros::Duration(10), transmitData_state);
    

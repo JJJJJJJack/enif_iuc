@@ -2,9 +2,10 @@
 
 <launch>
   <arg name="AGENT_NUMBER" default="1"/>
-  <arg name="log" default="log"/>
-
+  <arg name="log" default="screen"/>  
+  
   <node name="enif_iuc_quad" pkg="enif_iuc" type="enif_iuc_quad" respawn="true" launch-prefix="" output="$(arg log)">
+    <param name="transmitRate" type="double" value=".35"/>
     <param name="AGENT_NUMBER" type="int" value="$(arg AGENT_NUMBER)"/>
     <param name="USB" type="string" value="/dev/xbee"/>
     <param name="sendLocal" type="bool" value="false"/>

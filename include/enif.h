@@ -89,7 +89,7 @@ bool sendRealTarget = true;
 bool sendTargetE = true;
 
 string data;    
-
+double transmitRate;
 
 std::string USB;
 int AGENT_NUMBER = 0;
