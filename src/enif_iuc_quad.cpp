@@ -16,7 +16,7 @@
 bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false, NEW_HOME = false, NEW_LOCAL = false, NEW_TARGETE=false, NEW_REALTARGET=false, NEW_BOX=false;
 
 int transCtr=0;
-auto start=std::chrono::system_clock::now();;
+auto start=std::chrono::system_clock::now();
 
 bool ERROR_CA = false, ERROR_LIDAR = false, ERROR_ALTITUDE = false, ERROR_GPS = false, ERROR_MPS = false;
 double CA_update_sec, Lidar_update_sec, GPS_update_sec, MPS_update_sec;
@@ -210,7 +210,7 @@ void transmitData_MPS(const ros::TimerEvent& event)
 {  
   
   if(NEW_GPS){
-    auto s1 = std::chrono::system_clock::now();
+    //auto s1 = std::chrono::system_clock::now();
     
     char send_buf[256] = {'\0'};
     form_start(send_buf);
@@ -221,11 +221,12 @@ void transmitData_MPS(const ros::TimerEvent& event)
     //form_checksum(send_buf);
     string send_data(send_buf);	    
     USBPORT.write(send_data);
-    auto e1 = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapse=e1-s1;
+    //auto e1 = std::chrono::system_clock::now();
+    //std::chrono::duration<double> elapse=e1-s1;
 
     NEW_MPS=false;
-    NEW_GPS=false;    
+    NEW_GPS=false;
+    /*
     if (transCtr==0){ // start timer
       start = std::chrono::system_clock::now();
     }
@@ -235,6 +236,7 @@ void transmitData_MPS(const ros::TimerEvent& event)
     //std::cout<<"transmit time="<<t1<<std::endl;
     transCtr++;
     std::cout<<"transmit per sec "<<transCtr<<", "<<elapsed_seconds.count()<<", "<<transCtr/(elapsed_seconds.count())<<", "<<elapse.count()<<std::endl;
+    */
   }
 
 }
