@@ -23,7 +23,7 @@ GPS   Lidar  CA   Alt  MPS  | agentState
 
 ---------------------------------------------*/
 
-serial::Serial USBPORT("/dev/xbee", 9600, serial::Timeout::simpleTimeout(1000));
+serial::Serial USBPORT("/dev/xbee", 57600, serial::Timeout::simpleTimeout(1000));
 
 using namespace std;
 
@@ -108,20 +108,17 @@ void form_mps(char* buf)
 {
   buf[2] = IntToChar(AGENT_NUMBER);
   buf[3] = IntToChar(COMMAND_MPS);
-  buf[4] = IntToChar(GAS_ID);
-  FloatToChar(buf+5, mps.percentLEL);
-  FloatToChar(buf+5+4, mps.temperature);
-  FloatToChar(buf+5+8, height.range);
-  FloatToChar(buf+5+12, mps.humidity);
-  DoubleToChar(buf+5+16, gps.latitude);
-  DoubleToChar(buf+5+24, gps.longitude);
-  DoubleToChar(buf+5+32, gps.altitude);
+  FloatToChar(buf+4, mps.percentLEL);
+  FloatToChar(buf+8, height.range);
+  DoubleToChar(buf+12, gps.latitude);
+  DoubleToChar(buf+20, gps.longitude);
+  DoubleToChar(buf+28, gps.altitude);
 
-  FloatToChar(buf+45, vel.twist.linear.x);
-  FloatToChar(buf+49, vel.twist.linear.y);
-  FloatToChar(buf+53, vel.twist.linear.z);  
+  FloatToChar(buf+36, vel.twist.linear.x);
+  FloatToChar(buf+40, vel.twist.linear.y);
+  FloatToChar(buf+44, vel.twist.linear.z);  
   
-  buf[57] = 0x0A;
+  buf[48] = 0x0A;
   // Clear the percentLEL to make sure we don't pub wrong data when we get new GPS
 
   clearmps();

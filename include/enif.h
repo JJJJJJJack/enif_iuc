@@ -59,7 +59,7 @@ using namespace std;
 #define COMMAND_REALTARGET 12
 
 // length of package without start, agentnumber, and command.
-#define MPS_LENGTH        54 //42
+#define MPS_LENGTH        45//54 //42
 #define REALTARGET_LENGTH 45
 #define TARGETE_LENGTH    45
 #define BOX_LENGTH        47
@@ -434,82 +434,50 @@ bool checkLocal(nav_msgs::Odometry mylocal)
 
 void get_mps(char* buf)
 {
-  GAS_ID = CharToInt(buf[0]);
-  if(GAS_ID == GAS_PROPANE){
-    string str = "Propane";
-    mps.gasID = str;
-  }else if(GAS_ID == GAS_METHANE){
-    string str = "Methane";
-    mps.gasID = str;
-  }else{
-    string str = "None";
-    mps.gasID = str;
-  }
-  float percentLEL, temperature, local_height, humidity, vel_x, vel_y, vel_z;
+  float percentLEL, local_height, vel_x, vel_y, vel_z;
   double GPS_latitude, GPS_longitude, GPS_altitude;
-  CharToFloat(buf+1, percentLEL);
+  CharToFloat(buf, percentLEL);
   mps.percentLEL = percentLEL;
-  CharToFloat(buf+1+4, temperature);
-  mps.temperature = temperature;
-  CharToFloat(buf+1+8, local_height);
+  CharToFloat(buf+4, local_height);
   mps.local_z = local_height;
-  CharToFloat(buf+1+12, humidity);
-  mps.humidity = humidity;
-  CharToDouble(buf+1+16, GPS_latitude);
+  CharToDouble(buf+8, GPS_latitude);
   mps.GPS_latitude = GPS_latitude;
-  CharToDouble(buf+1+24, GPS_longitude);
+  CharToDouble(buf+16, GPS_longitude);
   mps.GPS_longitude = GPS_longitude;
-  CharToDouble(buf+1+32, GPS_altitude);
+  CharToDouble(buf+24, GPS_altitude);
   mps.GPS_altitude = GPS_altitude;
 
-  CharToFloat(buf+41, vel_x);
+  CharToFloat(buf+32, vel_x);
   mps.vel_x = vel_x;  
-  CharToFloat(buf+45, vel_y);
+  CharToFloat(buf+36, vel_y);
   mps.vel_y = vel_y;
-  CharToFloat(buf+49, vel_z);
+  CharToFloat(buf+40, vel_z);
   mps.vel_z = vel_z;
 
-  package_length = 45;  
 }
 
 void get_other_mps(char* buf)
 {
-  GAS_ID = CharToInt(buf[0]);
-  if(GAS_ID == GAS_PROPANE){
-    string str = "Propane";
-    mps_other.gasID = str;
-  }else if(GAS_ID == GAS_METHANE){
-    string str = "Methane";
-    mps_other.gasID = str;
-  }else{
-    string str = "None";
-    mps_other.gasID = str;
-  }
-  float percentLEL, temperature, local_height, humidity, vel_x, vel_y, vel_z;
+  float percentLEL, local_height, vel_x, vel_y, vel_z;
   double GPS_latitude, GPS_longitude, GPS_altitude;
-  CharToFloat(buf+1, percentLEL);
+  CharToFloat(buf, percentLEL);
   mps_other.percentLEL = percentLEL;
-  CharToFloat(buf+1+4, temperature);
-  mps_other.temperature = temperature;
-  CharToFloat(buf+1+8, local_height);
+  CharToFloat(buf+4, local_height);
   mps_other.local_z = local_height;
-  CharToFloat(buf+1+12, humidity);
-  mps_other.humidity = humidity;
-  CharToDouble(buf+1+16, GPS_latitude);
+  CharToDouble(buf+8, GPS_latitude);
   mps_other.GPS_latitude = GPS_latitude;
-  CharToDouble(buf+1+24, GPS_longitude);
+  CharToDouble(buf+16, GPS_longitude);
   mps_other.GPS_longitude = GPS_longitude;
-  CharToDouble(buf+1+32, GPS_altitude);
+  CharToDouble(buf+24, GPS_altitude);
   mps_other.GPS_altitude = GPS_altitude;
 
-  CharToFloat(buf+41, vel_x);
+  CharToFloat(buf+32, vel_x);
   mps_other.vel_x = vel_x;  
-  CharToFloat(buf+45, vel_y);
+  CharToFloat(buf+36, vel_y);
   mps_other.vel_y = vel_y;
-  CharToFloat(buf+49, vel_z);
+  CharToFloat(buf+40, vel_z);
   mps_other.vel_z = vel_z;
 
-  package_length = 45;
 }
 
 void get_targetE_other(char* buf)
