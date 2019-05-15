@@ -28,7 +28,7 @@ GPS   Lidar  CA   Alt  MPS  | agentState
 
 ---------------------------------------------*/
 
-serial::Serial USBPORT("/dev/xbee", 19200, serial::Timeout::simpleTimeout(1000));
+serial::Serial USBPORT("/dev/xbee", 115200, serial::Timeout::simpleTimeout(1000));
 
 using namespace std;
 
