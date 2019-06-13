@@ -56,18 +56,38 @@ void local_callback(const nav_msgs::Odometry &new_message)
   NEW_LOCAL = true;
 }
 
+void mox_callback(const mps_driver::MPS &new_message){
+  if (useMox){
+    mps = new_message;
+    if (mps.percentLEL<2.0){
+      mps.percentLEL=0;
+    }
+    if(mps.gasID.compare("Propane")==0)
+      GAS_ID = GAS_PROPANE;
+    else if(mps.gasID.compare("Methane")==0)
+      GAS_ID = GAS_METHANE;
+    else
+      GAS_ID = GAS_NONE;
+    NEW_MPS = true;
+    ERROR_MPS = false;
+    MPS_update_sec = ros::Time::now().toSec();
+  }
+}
+
 void mps_callback(const mps_driver::MPS &new_message)
 {
-  mps = new_message;
-  if(mps.gasID.compare("Propane")==0)
-    GAS_ID = GAS_PROPANE;
-  else if(mps.gasID.compare("Methane")==0)
-    GAS_ID = GAS_METHANE;
-  else
-    GAS_ID = GAS_NONE;
-  NEW_MPS = true;
-  ERROR_MPS = false;
-  MPS_update_sec = ros::Time::now().toSec();
+  if (!useMox){
+    mps = new_message;
+    if(mps.gasID.compare("Propane")==0)
+      GAS_ID = GAS_PROPANE;
+    else if(mps.gasID.compare("Methane")==0)
+      GAS_ID = GAS_METHANE;
+    else
+      GAS_ID = GAS_NONE;
+    NEW_MPS = true;
+    ERROR_MPS = false;
+    MPS_update_sec = ros::Time::now().toSec();
+  }
 }
 
 void vel_callback(const geometry_msgs::TwistStamped& msg)
@@ -284,6 +304,7 @@ int main(int argc, char **argv)
   // Subscribe topics from onboard ROS and transmit it through Xbee
   ros::Subscriber sub_state   = n.subscribe("agentState",1,state_callback);
   ros::Subscriber sub_mps     = n.subscribe("mps_data",1,mps_callback);
+  ros::Subscriber sub_mox     = n.subscribe("mox_data",1,mox_callback);
   ros::Subscriber sub_GPS     = n.subscribe("mavros/global_position/global" ,1, GPS_callback);  
   ros::Subscriber sub_vel     = n.subscribe("mavros/local_position/velocity",1, vel_callback);
   
@@ -312,6 +333,7 @@ int main(int argc, char **argv)
   n.getParam("/enif_iuc_quad/sendBat", sendBat);
   n.getParam("/enif_iuc_quad/sendTargetE", sendTargetE);
   n.getParam("/enif_iuc_quad/sendRealTarget", sendRealTarget);
+  n.getParam("/enif_iuc_quad/useMox",useMox);
   cout<<"sendLocal: "<<sendLocal<<endl;
   cout<<"sendHome: "<<sendHome<<endl;
   cout<<"sendBat: "<<sendBat<<endl;

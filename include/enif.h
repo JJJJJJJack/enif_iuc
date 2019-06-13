@@ -98,6 +98,7 @@ int GAS_ID = 0;
 
 std_msgs::UInt8 state;
 sensor_msgs::NavSatFix gps;
+bool useMox;
 
 geometry_msgs::TwistStamped vel;
 
