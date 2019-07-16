@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-  <arg name="AGENT_NUMBER" default="5"/>
+  <arg name="AGENT_NUMBER" default="1"/>
   <arg name="log" default="screen"/>  
   
   <node name="enif_iuc_quad" pkg="enif_iuc" type="enif_iuc_quad" respawn="true" launch-prefix="" output="$(arg log)">
@@ -11,6 +11,6 @@
     <param name="sendLocal" type="bool" value="false"/>
     <param name="sendBat" type="bool" value="false"/>
     <param name="sendHome" type="bool" value="true"/>
-    <param name="useMox" type="bool" value="false"/>
+    <param name="useMox" type="bool" value="true"/>
   </node>
 </launch>

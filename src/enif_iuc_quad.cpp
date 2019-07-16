@@ -13,7 +13,7 @@
 #include <time.h>
 #include <chrono>
 
-bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false, NEW_HOME = false, NEW_LOCAL = false, NEW_TARGETE=false, NEW_REALTARGET=false, NEW_BOX=false;
+bool NEW_STATE = false, NEW_MPS = false, NEW_GPS = false, NEW_HEIGHT = false, NEW_BATTERY = false, NEW_HOME = false, NEW_LOCAL = false, NEW_TARGETE=false, NEW_REALTARGET=false, NEW_BOX=false, usingMPS=false;
 
 int transCtr=0;
 auto start=std::chrono::system_clock::now();
@@ -57,7 +57,7 @@ void local_callback(const nav_msgs::Odometry &new_message)
 }
 
 void mox_callback(const mps_driver::MPS &new_message){
-  if (useMox){
+  if (useMox && !usingMPS){
     mps = new_message;
     if (mps.percentLEL<2.0){
       mps.percentLEL=0;
@@ -76,18 +76,17 @@ void mox_callback(const mps_driver::MPS &new_message){
 
 void mps_callback(const mps_driver::MPS &new_message)
 {
-  if (!useMox){
-    mps = new_message;
-    if(mps.gasID.compare("Propane")==0)
-      GAS_ID = GAS_PROPANE;
-    else if(mps.gasID.compare("Methane")==0)
-      GAS_ID = GAS_METHANE;
-    else
-      GAS_ID = GAS_NONE;
-    NEW_MPS = true;
-    ERROR_MPS = false;
-    MPS_update_sec = ros::Time::now().toSec();
-  }
+  usingMPS = true;
+  mps = new_message;
+  if(mps.gasID.compare("Propane")==0)
+    GAS_ID = GAS_PROPANE;
+  else if(mps.gasID.compare("Methane")==0)
+    GAS_ID = GAS_METHANE;
+  else
+    GAS_ID = GAS_NONE;    
+  NEW_MPS = true;
+  ERROR_MPS = false;
+  MPS_update_sec = ros::Time::now().toSec();    
 }
 
 void vel_callback(const geometry_msgs::TwistStamped& msg)
@@ -246,6 +245,7 @@ void transmitData_MPS(const ros::TimerEvent& event)
 
     NEW_MPS=false;
     NEW_GPS=false;
+    usingMPS=false;
     /*
     if (transCtr==0){ // start timer
       start = std::chrono::system_clock::now();
